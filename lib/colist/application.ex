@@ -12,6 +12,7 @@ defmodule Colist.Application do
       Colist.Repo,
       {DNSCluster, query: Application.get_env(:colist, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Colist.PubSub},
+      ColistWeb.Presence,
       # Start a worker by calling: Colist.Worker.start_link(arg)
       # {Colist.Worker, arg},
       # Start to serve requests, typically the last entry
