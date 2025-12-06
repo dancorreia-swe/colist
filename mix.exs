@@ -82,8 +82,14 @@ defmodule Colist.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind colist", "esbuild colist"],
+      "assets.build": [
+        "cmd --cd assets bun i --frozen-lockfile",
+        "compile",
+        "tailwind colist",
+        "esbuild colist"
+      ],
       "assets.deploy": [
+        "cmd --cd assets bun i --frozen-lockfile",
         "tailwind colist --minify",
         "esbuild colist --minify",
         "phx.digest"
