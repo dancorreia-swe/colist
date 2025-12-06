@@ -1,0 +1,22 @@
+defmodule Colist.Lists.Item do
+  use Ecto.Schema
+  alias Colist.Lists.List
+  import Ecto.Changeset
+
+  @derive {Jason.Encoder, only: [:id, :text, :completed, :position, :list_id]}
+
+  schema "items" do
+    field :text, :string
+    field :completed, :boolean, default: false
+    field :position, :integer
+    belongs_to :list, List
+
+    timestamps(type: :utc_datetime)
+  end
+
+  @doc false
+  def changeset(item, attrs) do
+    item
+    |> cast(attrs, [:text, :completed, :position, :list_id])
+  end
+end
