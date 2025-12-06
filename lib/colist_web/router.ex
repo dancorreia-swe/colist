@@ -17,7 +17,13 @@ defmodule ColistWeb.Router do
   scope "/", ColistWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/", ListController, :create
+    live "/:slug", ListLive.Show, :show
+
+    live "/lists", ListLive.Index, :index
+    live "/lists/new", ListLive.Form, :new
+    live "/lists/:id", ListLive.Show, :show
+    live "/lists/:id/edit", ListLive.Form, :edit
   end
 
   # Other scopes may use custom stacks.
