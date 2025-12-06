@@ -12,6 +12,11 @@ defmodule ColistWeb.ListLive.Show do
       <.header>
         {@list.title}
         <:subtitle>This is a list record from your database.</:subtitle>
+        <:actions>
+          <.button phx-hook="CopyUrl" id="copy-url-btn">
+            <.icon name="hero-link" />
+          </.button>
+        </:actions>
       </.header>
 
       <.form for={@form} id="item-form" phx-change="validate" phx-submit="save">
@@ -107,6 +112,10 @@ defmodule ColistWeb.ListLive.Show do
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Failed to update item")}
     end
+  end
+
+  def handle_event("copied_url", _params, socket) do
+    {:noreply, put_flash(socket, :info, "URL copied to clipboard!")}
   end
 
   defp save_item(socket, :show, item_params) do
