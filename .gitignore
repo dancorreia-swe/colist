@@ -35,3 +35,6 @@ colist-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Local tool configs
+.claude/
+.expert/
