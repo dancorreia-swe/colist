@@ -15,7 +15,7 @@ defmodule ColistWeb.ListController do
         conn
         |> put_resp_header("retry-after", Integer.to_string(div(retry_after, 1000)))
         |> put_flash(:error, "Too many lists created. Please try again later.")
-        |> redirect(to: ~p"/")
+        |> redirect(to: ~p"/rate-limited")
     end
   end
 
