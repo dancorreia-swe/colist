@@ -105,3 +105,27 @@
   display: contents;
 }
 
+/* Theme-aware logo classes */
+.logo-light {
+  display: block;
+}
+:where([data-theme="dark"]) .logo-light {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme])) .logo-light {
+    display: none;
+  }
+}
+
+.logo-dark {
+  display: none;
+}
+:where([data-theme="dark"]) .logo-dark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme])) .logo-dark {
+    display: block;
+  }
+}

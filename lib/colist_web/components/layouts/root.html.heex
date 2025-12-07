@@ -7,29 +7,32 @@
     <.live_title default="Colist" suffix=" · Colist">
       {assigns[:page_title]}
     </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
-    </script>
-    <script>
-      (() => {
-        const setTheme = (theme) => {
-          if (theme === "system") {
-            localStorage.removeItem("phx:theme");
-            document.documentElement.removeAttribute("data-theme");
-          } else {
-            localStorage.setItem("phx:theme", theme);
-            document.documentElement.setAttribute("data-theme", theme);
-          }
-        };
-        if (!document.documentElement.hasAttribute("data-theme")) {
-          setTheme(localStorage.getItem("phx:theme") || "system");
-        }
-        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
+            <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+            <link rel="icon" href={~p"/images/logo-colist.svg"} media="(prefers-color-scheme: light)" />
+            <link rel="icon" href={~p"/images/logo-colist-dark.svg"} media="(prefers-color-scheme: dark)" />
+            <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+            </script>
+            <script>
+              (() => {
+                const setTheme = (theme) => {
+                  if (theme === "system") {
+                    localStorage.removeItem("phx:theme");
+                    document.documentElement.removeAttribute("data-theme");
+                  } else {
+                    localStorage.setItem("phx:theme", theme);
+                    document.documentElement.setAttribute("data-theme", theme);
+                  }
+                };
         
-        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
-      })();
-    </script>
-  </head>
+                if (!document.documentElement.hasAttribute("data-theme")) {
+                  setTheme(localStorage.getItem("phx:theme") || "system");
+                }
+        
+                window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
+                
+                window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
+              })();
+            </script>  </head>
   <body>
     {@inner_content}
   </body>
