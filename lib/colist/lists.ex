@@ -140,6 +140,10 @@ defmodule Colist.Lists do
     Repo.all(from i in Item, where: i.list_id == ^list_id, order_by: [asc: i.position, asc: i.id])
   end
 
+  def list_completed_items(list_id) do
+    Repo.all(from i in Item, where: i.list_id == ^list_id and i.completed == true)
+  end
+
   def update_item_positions(ids) do
     ids
     |> Enum.with_index()
