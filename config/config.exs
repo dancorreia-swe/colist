@@ -19,8 +19,14 @@ config :colist, ColistWeb.Endpoint,
     formats: [html: ColistWeb.ErrorHTML, json: ColistWeb.ErrorJSON],
     layout: false
   ],
+  check_origin: [
+    "https://colist.live",
+    "https://www.colist.live"
+  ],
   pubsub_server: Colist.PubSub,
   live_view: [signing_salt: "ZeS2zs/6"]
+
+config :colist, ColistWeb.Gettext, locales: ~w(en pt_BR)
 
 # Configure the mailer
 #
