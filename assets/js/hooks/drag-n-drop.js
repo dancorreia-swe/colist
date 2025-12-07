@@ -8,6 +8,12 @@ Hooks.DragNDrop = {
       animation: 150,
       ghostClass: "opacity-50",
       handle: ".drag-handle",
+      // Mobile/touch support
+      forceFallback: true,
+      fallbackClass: "opacity-50",
+      delay: 150,
+      delayOnTouchOnly: true,
+      touchStartThreshold: 5,
       onEnd: () => {
         const ids = Array.from(this.el.children)
           .map((el) => el.id.replace("items-", ""))
