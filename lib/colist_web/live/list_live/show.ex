@@ -9,52 +9,62 @@ defmodule ColistWeb.ListLive.Show do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash}>
-      <.header>
-        {@list.title}
-        <:subtitle>This is a list record from your database.</:subtitle>
-        <:actions>
+      <header class="flex items-center justify-between gap-6 pb-4">
+        <input
+          type="text"
+          name="title"
+          value={@list.title}
+          phx-blur="update_title"
+          phx-keydown="update_title"
+          phx-key="Enter"
+          class="text-lg font-semibold leading-8 bg-transparent border-none outline-none w-full focus:bg-base-200 focus:px-2 focus:-mx-2 rounded transition-all"
+          placeholder="Untitled"
+        />
+        <div class="flex-none">
           <.button phx-hook="CopyUrl" id="copy-url-btn">
             <.icon name="hero-link" />
           </.button>
-        </:actions>
-      </.header>
+        </div>
+      </header>
 
       <.form for={@form} id="item-form" phx-change="validate" phx-submit="save">
-        <.input field={@form[:text]} type="text" label="Title" placeholder="Make eggs..." />
+        <.input
+          field={@form[:text]}
+          type="text"
+          placeholder="Add a task..."
+          class="input input-ghost w-full text-base focus:input-bordered focus:bg-base-100"
+        />
       </.form>
 
-      <ul class="list bg-base-100 rounded-box shadow-md" id="items" phx-update="stream">
-        <li :for={{item_id, item} <- @streams.items} class="list-row" id={item_id}>
-          <.input
+      <ul
+        class="bg-base-100 rounded-box shadow-md"
+        id="items"
+        phx-update="stream"
+        phx-hook="DragNDrop"
+      >
+        <li
+          :for={{item_id, item} <- @streams.items}
+          class={["flex items-center gap-3 py-2 px-3 group cursor-grab active:cursor-grabbing", item.completed && "opacity-50"]}
+          id={item_id}
+        >
+          <input
             id={"complete-item-#{item.id}"}
             type="checkbox"
-            name="completed"
-            label=""
             checked={item.completed}
             phx-click={JS.push("toggle_completion", value: %{id: item.id})}
+            class="checkbox checkbox-sm"
           />
-          <span>{item.text}</span>
+          <span class={["flex-1", item.completed && "line-through"]}>
+            {item.text}
+          </span>
           <button
-            class="btn btn-square btn-ghost btn-error"
+            class="btn btn-square btn-ghost btn-sm opacity-0 group-hover:opacity-100 transition-opacity text-error"
             phx-click={
               JS.push("delete", value: %{id: item.id})
               |> hide("##{item_id}")
             }
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-trash2-icon lucide-trash-2"
-            >
-              <path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
+            <.icon name="hero-trash" class="size-4" />
           </button>
         </li>
       </ul>
@@ -97,7 +107,7 @@ defmodule ColistWeb.ListLive.Show do
     item = Lists.get_item!(id)
     {:ok, _} = Lists.delete_item(item)
 
-    broadcast(socket.assigns.list.slug, "item_deleted", item)
+    broadcast(socket.assigns.list.slug, "item_deleted", %{item: item})
     {:noreply, stream_delete(socket, :items, item)}
   end
 
@@ -106,7 +116,7 @@ defmodule ColistWeb.ListLive.Show do
 
     case Lists.update_item(item, %{completed: !item.completed}) do
       {:ok, updated_item} ->
-        broadcast(socket.assigns.list.slug, "item_updated", updated_item)
+        broadcast(socket.assigns.list.slug, "item_updated", %{item: updated_item})
         {:noreply, stream_insert(socket, :items, updated_item)}
 
       {:error, _changeset} ->
@@ -118,12 +128,35 @@ defmodule ColistWeb.ListLive.Show do
     {:noreply, put_flash(socket, :info, "URL copied to clipboard!")}
   end
 
+  def handle_event("update_title", %{"value" => title}, socket) do
+    list = socket.assigns.list
+
+    if title != list.title && String.trim(title) != "" do
+      case Lists.update_list(list, %{title: title}) do
+        {:ok, updated_list} ->
+          broadcast(list.slug, "list_updated", %{list: updated_list})
+          {:noreply, assign(socket, :list, updated_list)}
+
+        {:error, _changeset} ->
+          {:noreply, put_flash(socket, :error, "Failed to update title")}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("reorder", %{"ids" => ids}, socket) do
+    Lists.update_item_positions(ids)
+    broadcast(socket.assigns.list.slug, "items_reordered", %{ids: ids})
+    {:noreply, socket}
+  end
+
   defp save_item(socket, :show, item_params) do
     item_params = Map.put(item_params, "list_id", socket.assigns.list.id)
 
     case Lists.create_item(item_params) do
       {:ok, item} ->
-        broadcast(socket.assigns.list.slug, "item_created", item)
+        broadcast(socket.assigns.list.slug, "item_created", %{item: item})
 
         {:noreply,
          socket
@@ -136,8 +169,8 @@ defmodule ColistWeb.ListLive.Show do
     end
   end
 
-  defp broadcast(slug, event, item) do
-    ColistWeb.Endpoint.broadcast_from!(self(), @topic <> ":#{slug}", event, %{item: item})
+  defp broadcast(slug, event, %{} = payload) do
+    ColistWeb.Endpoint.broadcast_from!(self(), @topic <> ":#{slug}", event, payload)
   end
 
   @impl true
@@ -151,5 +184,14 @@ defmodule ColistWeb.ListLive.Show do
 
   def handle_info(%{event: "item_deleted", payload: %{item: item}}, socket) do
     {:noreply, stream_delete(socket, :items, item)}
+  end
+
+  def handle_info(%{event: "list_updated", payload: %{list: list}}, socket) do
+    {:noreply, assign(socket, :list, list)}
+  end
+
+  def handle_info(%{event: "items_reordered", payload: %{ids: _ids}}, socket) do
+    # Reset stream with fresh order from database
+    {:noreply, stream(socket, :items, list_items(socket.assigns.list.id), reset: true)}
   end
 end

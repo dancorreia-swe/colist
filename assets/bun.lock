@@ -4,14 +4,11 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "muuri": "^0.9.5",
-        "web-animations-js": "^2.3.2",
+        "sortablejs": "^1.15.6",
       },
     },
   },
   "packages": {
-    "muuri": ["muuri@0.9.5", "", {}, "sha512-nJL9/Pd5IaIXGAVunBs/LLQ+v6tPkvlqCYrlauWESgkVFr+F+CRf8HnayRh4AqiQ1S/PIEN39fhJSe4L5rLlxg=="],
-
-    "web-animations-js": ["web-animations-js@2.3.2", "", {}, "sha512-TOMFWtQdxzjWp8qx4DAraTWTsdhxVSiWa6NkPFSaPtZ1diKUxTn4yTix73A1euG1WbSOMMPcY51cnjTIHrGtDA=="],
+    "sortablejs": ["sortablejs@1.15.6", "", {}, "sha512-aNfiuwMEpfBM/CN6LY0ibyhxPfPbyFeBTYJKCvzkJ2GkUpazIt3H+QIPAMHwqQ7tMKaHz1Qj+rJJCqljnf4p3A=="],
   }
 }

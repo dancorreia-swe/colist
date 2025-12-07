@@ -137,7 +137,18 @@ defmodule Colist.Lists do
   end
 
   def list_items_by_list_id(list_id) do
-    Repo.all(from i in Item, where: i.list_id == ^list_id)
+    Repo.all(from i in Item, where: i.list_id == ^list_id, order_by: [asc: i.position, asc: i.id])
+  end
+
+  def update_item_positions(ids) do
+    ids
+    |> Enum.with_index()
+    |> Enum.each(fn {id, index} ->
+      from(i in Item, where: i.id == ^id)
+      |> Repo.update_all(set: [position: index])
+    end)
+
+    :ok
   end
 
   @doc """

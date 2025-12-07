@@ -3,6 +3,8 @@ defmodule Colist.Lists.List do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {Jason.Encoder, only: [:id, :title]}
+
   schema "lists" do
     field :slug, :string
     field :title, :string
