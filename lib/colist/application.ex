@@ -24,7 +24,6 @@ defmodule Colist.Application do
     Supervisor.start_link(children, opts)
   end
 
-  # Only start workers when running the server (not during asset compilation)
   defp workers do
     if Application.get_env(:colist, :start_workers, true) do
       [Colist.Workers.ListCleaner]
