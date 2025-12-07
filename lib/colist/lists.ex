@@ -69,8 +69,13 @@ defmodule Colist.Lists do
 
   @spec create_list(map()) :: {:ok, %List{}} | {:error, %Ecto.Changeset{}}
   def create_list(attrs) do
+    expires_at =
+      DateTime.utc_now()
+      |> DateTime.add(7, :day)
+      |> DateTime.truncate(:second)
+
     %List{}
-    |> List.changeset(attrs)
+    |> List.changeset(Map.put(attrs, :expires_at, expires_at))
     |> Repo.insert()
   end
 
@@ -106,6 +111,11 @@ defmodule Colist.Lists do
   """
   def delete_list(%List{} = list) do
     Repo.delete(list)
+  end
+
+  def delete_expired_lists do
+    from(l in List, where: not is_nil(l.expires_at) and l.expires_at < ^DateTime.utc_now())
+    |> Repo.delete_all()
   end
 
   @doc """

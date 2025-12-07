@@ -138,7 +138,7 @@ defmodule ColistWeb.ListLive.Show do
             <.icon name="hero-bars-2" class="size-4" />
           </span>
           <span
-            class={["w-2 h-2 rounded-full shrink-0", user_color(@item_creators[item.id])]}
+            class={["w-2 h-2 rounded-full shrink-0", user_color(@item_creators[item.id] || item.id)]}
             title={@item_creators[item.id] || "Unknown"}
           >
           </span>
@@ -168,7 +168,7 @@ defmodule ColistWeb.ListLive.Show do
             {item.text}
           </span>
           <button
-            class="btn btn-square btn-ghost btn-sm opacity-0 group-hover:opacity-100 transition-opacity text-error"
+            class="btn btn-square btn-ghost btn-sm opacity-0 group-hover:opacity-100 text-error"
             phx-click={
               JS.push("delete", value: %{id: item.id})
               |> hide("##{item_id}")
@@ -191,7 +191,7 @@ defmodule ColistWeb.ListLive.Show do
 
     {:ok,
      socket
-     |> assign(:page_title, "Show List")
+     |> assign(:page_title, "List")
      |> assign(:list, list)
      |> assign(:current_user, nil)
      |> assign(:presence_count, 0)
