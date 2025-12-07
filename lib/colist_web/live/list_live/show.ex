@@ -2,6 +2,7 @@ defmodule ColistWeb.ListLive.Show do
   use ColistWeb, :live_view
 
   alias Colist.Lists
+  alias Colist.RateLimit
 
   @topic "todo"
   @colors ~w(bg-red-400 bg-orange-400 bg-amber-400 bg-yellow-400 bg-lime-400 bg-green-400 bg-emerald-400 bg-teal-400 bg-cyan-400 bg-sky-400 bg-blue-400 bg-indigo-400 bg-violet-400 bg-purple-400 bg-fuchsia-400 bg-pink-400 bg-rose-400)
@@ -189,10 +190,13 @@ defmodule ColistWeb.ListLive.Show do
     items = list_items(list.id)
     completed_count = Enum.count(items, & &1.completed)
 
+    client_ip = get_client_ip(socket)
+
     {:ok,
      socket
      |> assign(:page_title, "List")
      |> assign(:list, list)
+     |> assign(:client_ip, client_ip)
      |> assign(:current_user, nil)
      |> assign(:presence_count, 0)
      |> assign(:item_creators, %{})
@@ -206,6 +210,13 @@ defmodule ColistWeb.ListLive.Show do
 
   defp list_items(list_id) do
     Lists.list_items_by_list_id(list_id)
+  end
+
+  defp get_client_ip(socket) do
+    case get_connect_info(socket, :peer_data) do
+      %{address: ip} -> ip |> :inet.ntoa() |> to_string()
+      _ -> "unknown"
+    end
   end
 
   @impl true
@@ -373,6 +384,19 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   defp save_item(socket, :show, item_params) do
+    case RateLimit.check_item_creation(socket.assigns.client_ip) do
+      :ok ->
+        create_item(socket, item_params)
+
+      {:error, :rate_limited, _retry_after} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Too many items created. Please try again later.")
+         |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
+    end
+  end
+
+  defp create_item(socket, item_params) do
     item_params = Map.put(item_params, "list_id", socket.assigns.list.id)
     creator = socket.assigns.current_user
 

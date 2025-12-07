@@ -13,6 +13,7 @@ defmodule Colist.Application do
         Colist.Repo,
         {DNSCluster, query: Application.get_env(:colist, :dns_cluster_query) || :ignore},
         {Phoenix.PubSub, name: Colist.PubSub},
+        Colist.RateLimit,
         ColistWeb.Presence,
         # Start to serve requests, typically the last entry
         ColistWeb.Endpoint
