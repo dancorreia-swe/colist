@@ -18,6 +18,7 @@ import Config
 # script that automatically sets the env var above.
 if System.get_env("PHX_SERVER") do
   config :colist, ColistWeb.Endpoint, server: true
+  config :colist, start_workers: true
 end
 
 config :colist, ColistWeb.Endpoint,

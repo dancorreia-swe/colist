@@ -7,23 +7,30 @@ defmodule Colist.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      ColistWeb.Telemetry,
-      Colist.Repo,
-      {DNSCluster, query: Application.get_env(:colist, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Colist.PubSub},
-      ColistWeb.Presence,
-      Colist.Workers.ListCleaner,
-      # Start a worker by calling: Colist.Worker.start_link(arg)
-      # {Colist.Worker, arg},
-      # Start to serve requests, typically the last entry
-      ColistWeb.Endpoint
-    ]
+    children =
+      [
+        ColistWeb.Telemetry,
+        Colist.Repo,
+        {DNSCluster, query: Application.get_env(:colist, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: Colist.PubSub},
+        ColistWeb.Presence,
+        # Start to serve requests, typically the last entry
+        ColistWeb.Endpoint
+      ] ++ workers()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Colist.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  # Only start workers when running the server (not during asset compilation)
+  defp workers do
+    if Application.get_env(:colist, :start_workers, true) do
+      [Colist.Workers.ListCleaner]
+    else
+      []
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration
