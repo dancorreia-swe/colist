@@ -68,7 +68,7 @@ defmodule ColistWeb.ListLive.Show do
           </ul>
         </div>
         <form method="dialog" class="modal-backdrop">
-          <button>close</button>
+          <button class="cursor-pointer" onclick="document.getElementById('presences_modal').close()">close</button>
         </form>
       </dialog>
 
@@ -92,16 +92,34 @@ defmodule ColistWeb.ListLive.Show do
             phx-key="Enter"
             class="input input-bordered w-full"
           />
+          <div class="modal-action">
+            <button
+              class="btn btn-primary"
+              phx-click={JS.push("set_presence") |> JS.dispatch("click", to: "#close-name-modal")}
+              phx-disable-with="Joining..."
+            >
+              Set Name
+            </button>
+          </div>
         </div>
       </dialog>
 
-      <.form for={@form} id="item-form" phx-change="validate" phx-submit="save">
-        <.input
-          field={@form[:text]}
-          type="text"
-          placeholder="Add a task..."
-          class="input input-ghost w-full text-base focus:input-bordered focus:bg-base-100"
-        />
+      <.form for={@form} id="item-form" phx-change="validate" phx-submit="save" class="flex gap-2 items-start">
+        <div class="flex-1">
+          <.input
+            field={@form[:text]}
+            type="text"
+            placeholder="Add a task..."
+            class="input input-ghost w-full text-base focus:input-bordered focus:bg-base-100"
+          />
+        </div>
+        <button
+          type="submit"
+          class="btn btn-primary btn-square md:hidden mt-1"
+          phx-disable-with="Sending..."
+        >
+          <.icon name="hero-paper-airplane" class="size-5 -rotate-45" />
+        </button>
       </.form>
 
       <div
