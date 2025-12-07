@@ -355,12 +355,14 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_event("set_presence", %{"value" => name}, socket) do
+    slug = socket.assigns.list.slug
+
     if connected?(socket) do
-      ColistWeb.Presence.track_user(name, %{id: name})
-      ColistWeb.Presence.subscribe()
+      ColistWeb.Presence.track_user(slug, name, %{id: name})
+      ColistWeb.Presence.subscribe(slug)
     end
 
-    presences = ColistWeb.Presence.list_online_users()
+    presences = ColistWeb.Presence.list_online_users(slug)
 
     {:noreply,
      socket

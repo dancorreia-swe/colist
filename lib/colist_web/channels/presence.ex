@@ -40,10 +40,12 @@ defmodule ColistWeb.Presence do
     {:ok, state}
   end
 
-  def list_online_users(),
-    do: list("online_users") |> Enum.map(fn {_id, presence} -> presence end)
+  def list_online_users(slug),
+    do: list(topic(slug)) |> Enum.map(fn {_id, presence} -> presence end)
 
-  def track_user(name, params), do: track(self(), "online_users", name, params)
+  def track_user(slug, name, params), do: track(self(), topic(slug), name, params)
 
-  def subscribe(), do: Phoenix.PubSub.subscribe(Colist.PubSub, "proxy:online_users")
+  def subscribe(slug), do: Phoenix.PubSub.subscribe(Colist.PubSub, "proxy:#{topic(slug)}")
+
+  defp topic(slug), do: "list:#{slug}"
 end
