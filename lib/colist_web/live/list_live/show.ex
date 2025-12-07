@@ -134,8 +134,8 @@ defmodule ColistWeb.ListLive.Show do
           class={["flex items-center gap-2 py-2 px-3 group", item.completed && "opacity-50"]}
           id={item_id}
         >
-          <span class="drag-handle cursor-grab active:cursor-grabbing opacity-30 hover:opacity-100">
-            <.icon name="hero-bars-2" class="size-4" />
+          <span class="drag-handle cursor-grab active:cursor-grabbing opacity-30 hover:opacity-100 touch-none p-2 -m-2 sm:p-0 sm:m-0">
+            <.icon name="hero-bars-2" class="size-5 sm:size-4" />
           </span>
           <span
             class={["w-2 h-2 rounded-full shrink-0", user_color(@item_creators[item.id] || item.id)]}
