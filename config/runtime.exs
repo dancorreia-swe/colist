@@ -24,17 +24,6 @@ end
 config :colist, ColistWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
-# Live Dashboard credentials (required in prod, optional in dev)
-if config_env() == :prod do
-  config :colist,
-    dashboard_user: System.fetch_env!("DASHBOARD_USER"),
-    dashboard_password: System.fetch_env!("DASHBOARD_PASSWORD")
-else
-  config :colist,
-    dashboard_user: System.get_env("DASHBOARD_USER", "admin"),
-    dashboard_password: System.get_env("DASHBOARD_PASSWORD", "admin")
-end
-
 if config_env() == :prod do
   database_url =
    System.get_env("DATABASE_URL") ||

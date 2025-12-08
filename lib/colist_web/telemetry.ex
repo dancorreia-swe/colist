@@ -21,17 +21,6 @@ defmodule ColistWeb.Telemetry do
 
   def metrics do
     [
-      # Colist Business Metrics
-      counter("colist.lists.created.count",
-        description: "Number of lists created"
-      ),
-      counter("colist.items.created.count",
-        description: "Number of items created"
-      ),
-      last_value("colist.presence.active_users.count",
-        description: "Number of active users across all lists"
-      ),
-
       # Phoenix Metrics
       summary("phoenix.endpoint.start.system_time",
         unit: {:native, :millisecond}
@@ -96,13 +85,9 @@ defmodule ColistWeb.Telemetry do
 
   defp periodic_measurements do
     [
-      {__MODULE__, :measure_active_users, []}
+      # A module, function and arguments to be invoked periodically.
+      # This function must call :telemetry.execute/3 and a metric must be added above.
+      # {ColistWeb, :count_users, []}
     ]
-  end
-
-  @doc false
-  def measure_active_users do
-    count = ColistWeb.PresenceCounter.count()
-    :telemetry.execute([:colist, :presence, :active_users], %{count: count}, %{})
   end
 end
