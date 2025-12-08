@@ -3,12 +3,13 @@ defmodule Colist.Lists.Item do
   alias Colist.Lists.List
   import Ecto.Changeset
 
-  @derive {Jason.Encoder, only: [:id, :text, :completed, :position, :list_id]}
+  @derive {Jason.Encoder, only: [:id, :text, :completed, :position, :list_id, :creator_id]}
 
   schema "items" do
     field :text, :string
     field :completed, :boolean, default: false
     field :position, :integer
+    field :creator_id, :string
     belongs_to :list, List
 
     timestamps(type: :utc_datetime)
@@ -17,6 +18,6 @@ defmodule Colist.Lists.Item do
   @doc false
   def changeset(item, attrs) do
     item
-    |> cast(attrs, [:text, :completed, :position, :list_id])
+    |> cast(attrs, [:text, :completed, :position, :list_id, :creator_id])
   end
 end

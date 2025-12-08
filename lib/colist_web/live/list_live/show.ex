@@ -5,13 +5,12 @@ defmodule ColistWeb.ListLive.Show do
   alias Colist.RateLimit
 
   @topic "todo"
-  @colors ~w(bg-red-400 bg-orange-400 bg-amber-400 bg-yellow-400 bg-lime-400 bg-green-400 bg-emerald-400 bg-teal-400 bg-cyan-400 bg-sky-400 bg-blue-400 bg-indigo-400 bg-violet-400 bg-purple-400 bg-fuchsia-400 bg-pink-400 bg-rose-400)
 
-  defp user_color(nil), do: "bg-base-300"
+  defp hsl_color(nil), do: nil
 
-  defp user_color(name) do
-    index = :erlang.phash2(name, length(@colors))
-    Enum.at(@colors, index)
+  defp hsl_color(id) do
+    hue = :erlang.phash2(id, 360)
+    "hsl(#{hue}, 70%, 60%)"
   end
 
   @impl true
@@ -61,9 +60,19 @@ defmodule ColistWeb.ListLive.Show do
               id={id}
               class="flex items-center gap-2"
             >
-              <span class={["w-3 h-3 rounded-full", user_color(presence.id)]}></span>
+              <span
+                class="w-3 h-3 rounded-full"
+                style={"background-color: #{presence.color || "oklch(0.872 0.01 258.338)"}"}
+              ></span>
               <span>{presence.user.name}</span>
               <span :if={presence.id == @current_user} class="badge badge-xs">you</span>
+              <button
+                :if={presence.id == @current_user}
+                class="btn btn-ghost btn-xs"
+                onclick="presences_modal.close(); name_modal.showModal();"
+              >
+                <.icon name="hero-pencil-square" class="size-3" />
+              </button>
             </li>
           </ul>
         </div>
@@ -85,28 +94,32 @@ defmodule ColistWeb.ListLive.Show do
           <h3 class="text-lg font-bold">Hello!</h3>
           <p class="py-4">Enter your name:</p>
 
-          <input
-            type="text"
-            placeholder="Enter your name"
-            phx-keydown={JS.push("set_presence") |> JS.dispatch("click", to: "#close-name-modal")}
-            phx-key="Enter"
-            class="input input-bordered w-full"
-          />
-          <div class="modal-action">
-            <button
-              class="btn btn-primary"
-              phx-click={JS.push("set_presence") |> JS.dispatch("click", to: "#close-name-modal")}
-              phx-disable-with="Joining..."
-            >
-              Set Name
-            </button>
-          </div>
+          <form phx-submit={JS.push("set_presence") |> JS.dispatch("click", to: "#close-name-modal")}>
+            <input
+              id="name-input"
+              name="value"
+              type="text"
+              value={@current_user}
+              placeholder="Enter your name"
+              class="input input-bordered w-full"
+            />
+            <div class="modal-action">
+              <button
+                type="submit"
+                class="btn btn-primary"
+                phx-disable-with="Joining..."
+              >
+                Set Name
+              </button>
+            </div>
+          </form>
         </div>
       </dialog>
 
       <.form for={@form} id="item-form" phx-change="validate" phx-submit="save" class="flex gap-2 items-start">
         <div class="flex-1">
           <.input
+            id="new-item-input"
             field={@form[:text]}
             type="text"
             placeholder="Add a task..."
@@ -116,7 +129,6 @@ defmodule ColistWeb.ListLive.Show do
         <button
           type="submit"
           class="btn btn-primary btn-square md:hidden mt-1"
-          phx-disable-with="Sending..."
         >
           <.icon name="hero-paper-airplane" class="size-5 -rotate-45" />
         </button>
@@ -150,15 +162,15 @@ defmodule ColistWeb.ListLive.Show do
         </li>
         <li
           :for={{item_id, item} <- @streams.items}
-          class={["flex items-center gap-2 py-2 px-3 group", item.completed && "opacity-50"]}
+          class={["flex items-center gap-2 py-2 px-4 sm:px-3 group", item.completed && "opacity-50"]}
           id={item_id}
         >
           <span class="drag-handle cursor-grab active:cursor-grabbing opacity-30 hover:opacity-100 touch-none p-2 -m-2 sm:p-0 sm:m-0">
             <.icon name="hero-bars-2" class="size-5 sm:size-4" />
           </span>
           <span
-            class={["w-2 h-2 rounded-full shrink-0", user_color(@item_creators[item.id] || item.id)]}
-            title={@item_creators[item.id] || "Unknown"}
+            class="w-2 h-2 rounded-full shrink-0"
+            style={"background-color: #{hsl_color(item.creator_id) || "oklch(0.872 0.01 258.338)"}"}
           >
           </span>
           <input
@@ -187,7 +199,7 @@ defmodule ColistWeb.ListLive.Show do
             {item.text}
           </span>
           <button
-            class="btn btn-square btn-ghost btn-sm opacity-0 group-hover:opacity-100 text-error"
+            class="btn btn-square btn-ghost btn-sm opacity-40 sm:opacity-0 sm:group-hover:opacity-100 text-error"
             phx-click={
               JS.push("delete", value: %{id: item.id})
               |> hide("##{item_id}")
@@ -215,9 +227,11 @@ defmodule ColistWeb.ListLive.Show do
      |> assign(:page_title, "List")
      |> assign(:list, list)
      |> assign(:client_ip, client_ip)
+     |> assign(:client_id, nil)
+     |> assign(:user_color, nil)
      |> assign(:current_user, nil)
+     |> assign(:changing_from, nil)
      |> assign(:presence_count, 0)
-     |> assign(:item_creators, %{})
      |> assign(:editing_item_id, nil)
      |> assign(:total_items, length(items))
      |> assign(:completed_items, completed_count)
@@ -238,6 +252,15 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   @impl true
+  def handle_event("set_client_id", %{"client_id" => client_id}, socket) do
+    user_color = hsl_color(client_id)
+
+    {:noreply,
+     socket
+     |> assign(:client_id, client_id)
+     |> assign(:user_color, user_color)}
+  end
+
   def handle_event("validate", %{"item" => item_params}, socket) do
     changeset =
       %Lists.Item{}
@@ -385,20 +408,34 @@ defmodule ColistWeb.ListLive.Show do
 
   def handle_event("set_presence", %{"value" => name}, socket) do
     slug = socket.assigns.list.slug
+    old_name = socket.assigns.current_user
+    color = socket.assigns.user_color
 
     if connected?(socket) do
-      ColistWeb.Presence.track_user(slug, name, %{id: name})
-      ColistWeb.Presence.subscribe(slug)
+      if old_name do
+        ColistWeb.Presence.untrack_user(slug, old_name)
+        ColistWeb.Presence.track_user(slug, name, %{id: name, color: color})
+        # Track old name so leave handler ignores it
+        {:noreply,
+         socket
+         |> assign(:current_user, name)
+         |> assign(:changing_from, old_name)
+         |> push_event("store", %{key: "username", data: name})}
+      else
+        ColistWeb.Presence.track_user(slug, name, %{id: name, color: color})
+        ColistWeb.Presence.subscribe(slug)
+        presences = ColistWeb.Presence.list_online_users(slug)
+
+        {:noreply,
+         socket
+         |> assign(:current_user, name)
+         |> assign(:presence_count, length(presences))
+         |> stream(:presences, presences, reset: true)
+         |> push_event("store", %{key: "username", data: name})}
+      end
+    else
+      {:noreply, socket}
     end
-
-    presences = ColistWeb.Presence.list_online_users(slug)
-
-    {:noreply,
-     socket
-     |> assign(:current_user, name)
-     |> assign(:presence_count, length(presences))
-     |> stream(:presences, presences, reset: true)
-     |> push_event("store", %{key: "username", data: name})}
   end
 
   defp save_item(socket, :show, item_params) do
@@ -415,19 +452,21 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   defp create_item(socket, item_params) do
-    item_params = Map.put(item_params, "list_id", socket.assigns.list.id)
-    creator = socket.assigns.current_user
+    item_params =
+      item_params
+      |> Map.put("list_id", socket.assigns.list.id)
+      |> Map.put("creator_id", socket.assigns.client_id)
 
     case Lists.create_item(item_params) do
       {:ok, item} ->
-        broadcast(socket.assigns.list.slug, "item_created", %{item: item, created_by: creator})
+        broadcast(socket.assigns.list.slug, "item_created", %{item: item})
 
         {:noreply,
          socket
          |> update(:total_items, &(&1 + 1))
-         |> update(:item_creators, &Map.put(&1, item.id, creator))
          |> stream_insert(:items, item)
-         |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
+         |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))
+         |> push_event("focus", %{id: "new-item-input"})}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -439,11 +478,10 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   @impl true
-  def handle_info(%{event: "item_created", payload: %{item: item, created_by: creator}}, socket) do
+  def handle_info(%{event: "item_created", payload: %{item: item}}, socket) do
     {:noreply,
      socket
      |> update(:total_items, &(&1 + 1))
-     |> update(:item_creators, &Map.put(&1, item.id, creator))
      |> stream_insert(:items, item, at: -1)}
   end
 
@@ -492,14 +530,22 @@ defmodule ColistWeb.ListLive.Show do
 
   def handle_info({ColistWeb.Presence, {:leave, presence}}, socket) do
     if presence.metas == [] do
-      socket =
-        if presence.id != socket.assigns.current_user do
-          update(socket, :presence_count, &max(&1 - 1, 0))
-        else
-          socket
-        end
+      # Ignore leave event if this is our old name during a name change
+      if presence.id == socket.assigns.changing_from do
+        {:noreply,
+         socket
+         |> assign(:changing_from, nil)
+         |> stream_delete(:presences, presence)}
+      else
+        socket =
+          if presence.id != socket.assigns.current_user do
+            update(socket, :presence_count, &max(&1 - 1, 0))
+          else
+            socket
+          end
 
-      {:noreply, stream_delete(socket, :presences, presence)}
+        {:noreply, stream_delete(socket, :presences, presence)}
+      end
     else
       {:noreply, stream_insert(socket, :presences, presence)}
     end

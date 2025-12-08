@@ -5,7 +5,11 @@ Hooks.LocalStoreData = {
     this.handleEvent("store", (obj) => this.store(obj));
     this.handleEvent("clear", (obj) => this.clear(obj));
     this.handleEvent("restore", (obj) => this.restore(obj));
+    this.handleEvent("focus", ({ id }) => {
+      setTimeout(() => document.getElementById(id)?.focus(), 50);
+    });
 
+    this.initClientId();
     this.checkUserName();
   },
 
@@ -20,6 +24,17 @@ Hooks.LocalStoreData = {
 
   clear(obj) {
     localStorage.removeItem(obj.key);
+  },
+
+  initClientId() {
+    let clientId = localStorage.getItem("client_id");
+
+    if (!clientId) {
+      clientId = crypto.randomUUID();
+      localStorage.setItem("client_id", clientId);
+    }
+
+    this.pushEvent("set_client_id", { client_id: clientId });
   },
 
   checkUserName() {
