@@ -1,7 +1,7 @@
 defmodule Colist.RateLimit do
   use Hammer, backend: :ets
 
-  @list_limit 10
+  @list_limit 25
   @item_limit 100
   @one_hour :timer.hours(1)
 
