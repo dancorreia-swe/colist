@@ -116,7 +116,13 @@ defmodule ColistWeb.ListLive.Show do
         </div>
       </dialog>
 
-      <.form for={@form} id="item-form" phx-change="validate" phx-submit="save" class="flex gap-2 items-start">
+      <.form
+        for={@form}
+        id="item-form"
+        phx-change="validate"
+        phx-submit="save"
+        class="flex gap-2 items-start"
+      >
         <div class="flex-1">
           <.input
             id="new-item-input"
@@ -415,7 +421,7 @@ defmodule ColistWeb.ListLive.Show do
       if old_name do
         ColistWeb.Presence.untrack_user(slug, old_name)
         ColistWeb.Presence.track_user(slug, name, %{id: name, color: color})
-        # Track old name so leave handler ignores it
+
         {:noreply,
          socket
          |> assign(:current_user, name)
@@ -457,19 +463,22 @@ defmodule ColistWeb.ListLive.Show do
       |> Map.put("list_id", socket.assigns.list.id)
       |> Map.put("creator_id", socket.assigns.client_id)
 
-    case Lists.create_item(item_params) do
-      {:ok, item} ->
-        broadcast(socket.assigns.list.slug, "item_created", %{item: item})
+    if item_params["text"] |> String.trim() == "" do
+      {:noreply, assign(socket, :form, to_form(Lists.change_item(%Lists.Item{})))}
+    else
+      case Lists.create_item(item_params) do
+        {:ok, item} ->
+          broadcast(socket.assigns.list.slug, "item_created", %{item: item})
 
-        {:noreply,
-         socket
-         |> update(:total_items, &(&1 + 1))
-         |> stream_insert(:items, item)
-         |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))
-         |> push_event("focus", %{id: "new-item-input"})}
+          {:noreply,
+           socket
+           |> update(:total_items, &(&1 + 1))
+           |> stream_insert(:items, item)
+           |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, :form, to_form(changeset))}
+        {:error, changeset} ->
+          {:noreply, assign(socket, :form, to_form(changeset))}
+      end
     end
   end
 
@@ -486,8 +495,6 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_info(%{event: "item_updated", payload: %{item: item}}, socket) do
-    # Check if completion status changed by comparing with what we expect
-    # Since we track completed_items, we need to sync it
     items = list_items(socket.assigns.list.id)
     completed_count = Enum.count(items, & &1.completed)
 
