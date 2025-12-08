@@ -116,7 +116,7 @@ defmodule ColistWeb.ListLive.Show do
         </div>
       </dialog>
 
-      <.form for={@form} id="item-form" phx-change="validate" phx-submit="save" class="flex gap-2 items-start">
+      <.form for={@form} id="item-form" phx-change="validate" phx-submit="save" phx-hook="KeepFocus" class="flex gap-2 items-start">
         <div class="flex-1">
           <.input
             id="new-item-input"
@@ -464,9 +464,7 @@ defmodule ColistWeb.ListLive.Show do
         {:noreply,
          socket
          |> update(:total_items, &(&1 + 1))
-         |> stream_insert(:items, item)
-         |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))
-         |> push_event("focus", %{id: "new-item-input"})}
+         |> stream_insert(:items, item)}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}

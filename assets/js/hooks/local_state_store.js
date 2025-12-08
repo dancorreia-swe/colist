@@ -1,13 +1,28 @@
 let Hooks = {};
 
+Hooks.KeepFocus = {
+  mounted() {
+    this.el.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = this.el.querySelector("input[type=text]");
+      const formData = new FormData(this.el);
+      const params = Object.fromEntries(formData.entries());
+
+      this.pushEvent("save", { item: params }, () => {
+        if (input) {
+          input.value = "";
+          input.focus();
+        }
+      });
+    });
+  }
+};
+
 Hooks.LocalStoreData = {
   mounted() {
     this.handleEvent("store", (obj) => this.store(obj));
     this.handleEvent("clear", (obj) => this.clear(obj));
     this.handleEvent("restore", (obj) => this.restore(obj));
-    this.handleEvent("focus", ({ id }) => {
-      setTimeout(() => document.getElementById(id)?.focus(), 50);
-    });
 
     this.initClientId();
     this.checkUserName();
