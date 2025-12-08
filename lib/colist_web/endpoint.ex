@@ -12,8 +12,8 @@ defmodule ColistWeb.Endpoint do
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [:peer_data, session: @session_options]],
-    longpoll: [connect_info: [:peer_data, session: @session_options]]
+    websocket: [connect_info: [:peer_data, :x_headers, session: @session_options]],
+    longpoll: [connect_info: [:peer_data, :x_headers, session: @session_options]]
 
   socket "/socket", ColistWeb.UserSocket,
     websocket: true,
@@ -55,5 +55,6 @@ defmodule ColistWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  plug RemoteIp
   plug ColistWeb.Router
 end

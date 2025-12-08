@@ -259,6 +259,25 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   defp get_client_ip(socket) do
+    # First try X-Forwarded-For header (set by reverse proxies like Fly.io)
+    case get_connect_info(socket, :x_headers) do
+      headers when is_list(headers) ->
+        case List.keyfind(headers, "x-forwarded-for", 0) do
+          {"x-forwarded-for", value} ->
+            # X-Forwarded-For can contain multiple IPs, take the first (original client)
+            value |> String.split(",") |> List.first() |> String.trim()
+
+          nil ->
+            # Fall back to peer_data if no X-Forwarded-For
+            get_peer_ip(socket)
+        end
+
+      _ ->
+        get_peer_ip(socket)
+    end
+  end
+
+  defp get_peer_ip(socket) do
     case get_connect_info(socket, :peer_data) do
       %{address: ip} -> ip |> :inet.ntoa() |> to_string()
       _ -> "unknown"

@@ -66,7 +66,8 @@ defmodule Colist.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:hammer, "~> 7.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:remote_ip, "~> 1.2"}
     ]
   end
 
