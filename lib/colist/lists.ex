@@ -74,9 +74,20 @@ defmodule Colist.Lists do
       |> DateTime.add(7, :day)
       |> DateTime.truncate(:second)
 
-    %List{}
-    |> List.changeset(Map.put(attrs, :expires_at, expires_at))
-    |> Repo.insert()
+    result =
+      %List{}
+      |> List.changeset(Map.put(attrs, :expires_at, expires_at))
+      |> Repo.insert()
+
+    case result do
+      {:ok, _list} ->
+        :telemetry.execute([:colist, :lists, :created], %{count: 1}, %{})
+
+      _ ->
+        :ok
+    end
+
+    result
   end
 
   @doc """
@@ -194,9 +205,20 @@ defmodule Colist.Lists do
 
   """
   def create_item(attrs) do
-    %Item{}
-    |> Item.changeset(attrs)
-    |> Repo.insert()
+    result =
+      %Item{}
+      |> Item.changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, _item} ->
+        :telemetry.execute([:colist, :items, :created], %{count: 1}, %{})
+
+      _ ->
+        :ok
+    end
+
+    result
   end
 
   @doc """

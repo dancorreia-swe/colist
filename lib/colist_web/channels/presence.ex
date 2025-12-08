@@ -19,6 +19,10 @@ defmodule ColistWeb.Presence do
   def handle_metas(topic, %{joins: joins, leaves: leaves}, presences, state) do
     for {user_id, _presence} <- joins do
       metas = Map.fetch!(presences, user_id)
+
+      # Track for telemetry (only count first connection, not additional tabs)
+      if length(metas) == 1, do: ColistWeb.PresenceCounter.increment()
+
       color = List.first(metas)[:color]
       user_data = %{id: user_id, color: color, user: %{name: user_id}, metas: metas}
       msg = {__MODULE__, {:join, user_data}}
@@ -32,6 +36,9 @@ defmodule ColistWeb.Presence do
           {:ok, presence_metas} -> presence_metas
           :error -> []
         end
+
+      # Track for telemetry (only count when user fully disconnects)
+      if metas == [], do: ColistWeb.PresenceCounter.decrement()
 
       color = List.first(presence.metas)[:color]
       user_data = %{id: user_id, color: color, user: %{name: user_id}, metas: metas}
