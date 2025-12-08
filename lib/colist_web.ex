@@ -52,6 +52,8 @@ defmodule ColistWeb do
     quote do
       use Phoenix.LiveView
 
+      on_mount ColistWeb.LocaleHook
+
       unquote(html_helpers())
     end
   end

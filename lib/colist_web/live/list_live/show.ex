@@ -30,7 +30,7 @@ defmodule ColistWeb.ListLive.Show do
           phx-keydown="update_title"
           phx-key="Enter"
           class="text-lg font-semibold leading-8 bg-transparent border-none outline-none w-full focus:bg-base-200 focus:px-2 focus:-mx-2 rounded transition-all"
-          placeholder="Untitled"
+          placeholder={gettext("Untitled")}
         />
         <div class="flex-none flex items-center gap-2">
           <button
@@ -53,7 +53,7 @@ defmodule ColistWeb.ListLive.Show do
               ✕
             </button>
           </form>
-          <h3 class="text-lg font-bold mb-4">Who's here</h3>
+          <h3 class="text-lg font-bold mb-4">{gettext("Who's here")}</h3>
           <ul id="presences-list" phx-update="stream" class="space-y-2">
             <li
               :for={{id, presence} <- @streams.presences}
@@ -63,9 +63,10 @@ defmodule ColistWeb.ListLive.Show do
               <span
                 class="w-3 h-3 rounded-full"
                 style={"background-color: #{presence.color || "oklch(0.872 0.01 258.338)"}"}
-              ></span>
+              >
+              </span>
               <span>{presence.user.name}</span>
-              <span :if={presence.id == @current_user} class="badge badge-xs">you</span>
+              <span :if={presence.id == @current_user} class="badge badge-xs">{gettext("you")}</span>
               <button
                 :if={presence.id == @current_user}
                 class="btn btn-ghost btn-xs"
@@ -77,7 +78,9 @@ defmodule ColistWeb.ListLive.Show do
           </ul>
         </div>
         <form method="dialog" class="modal-backdrop">
-          <button class="cursor-pointer" onclick="document.getElementById('presences_modal').close()">close</button>
+          <button class="cursor-pointer" onclick="document.getElementById('presences_modal').close()">
+            {gettext("close")}
+          </button>
         </form>
       </dialog>
 
@@ -91,8 +94,8 @@ defmodule ColistWeb.ListLive.Show do
               ✕
             </button>
           </form>
-          <h3 class="text-lg font-bold">Hello!</h3>
-          <p class="py-4">Enter your name:</p>
+          <h3 class="text-lg font-bold">{gettext("Hello!")}</h3>
+          <p class="py-4">{gettext("Enter your name:")}</p>
 
           <form phx-submit={JS.push("set_presence") |> JS.dispatch("click", to: "#close-name-modal")}>
             <input
@@ -100,16 +103,16 @@ defmodule ColistWeb.ListLive.Show do
               name="value"
               type="text"
               value={@current_user}
-              placeholder="Enter your name"
+              placeholder={gettext("Enter your name")}
               class="input input-bordered w-full"
             />
             <div class="modal-action">
               <button
                 type="submit"
                 class="btn btn-primary"
-                phx-disable-with="Joining..."
+                phx-disable-with={gettext("Joining...")}
               >
-                Set Name
+                {gettext("Set Name")}
               </button>
             </div>
           </form>
@@ -128,7 +131,7 @@ defmodule ColistWeb.ListLive.Show do
             id="new-item-input"
             field={@form[:text]}
             type="text"
-            placeholder="Add a task..."
+            placeholder={gettext("Add a task...")}
             class="input input-ghost w-full text-base focus:input-bordered focus:bg-base-100"
           />
         </div>
@@ -144,13 +147,18 @@ defmodule ColistWeb.ListLive.Show do
         :if={@total_items > 0}
         class="flex items-center justify-between text-sm text-base-content/60 mb-2"
       >
-        <span>{@completed_items}/{@total_items} completed</span>
+        <span>
+          {gettext("%{completed}/%{total} completed",
+            completed: @completed_items,
+            total: @total_items
+          )}
+        </span>
         <button
           :if={@completed_items > 0}
           phx-click="clear_completed"
           class="text-xs hover:text-error transition-colors"
         >
-          Clear completed
+          {gettext("Clear completed")}
         </button>
       </div>
 
@@ -161,9 +169,9 @@ defmodule ColistWeb.ListLive.Show do
         phx-hook="DragNDrop"
       >
         <li id="items-empty" class="hidden only:block py-8 px-4 text-center text-base-content/50">
-          <p class="mb-2">No tasks yet. Add one above!</p>
+          <p class="mb-2">{gettext("No tasks yet. Add one above!")}</p>
           <p class="text-xs">
-            Share the URL to collaborate • Changes sync in real-time
+            {gettext("Share the URL to collaborate • Changes sync in real-time")}
           </p>
         </li>
         <li
@@ -230,7 +238,7 @@ defmodule ColistWeb.ListLive.Show do
 
     {:ok,
      socket
-     |> assign(:page_title, "List")
+     |> assign(:page_title, gettext("List"))
      |> assign(:list, list)
      |> assign(:client_ip, client_ip)
      |> assign(:client_id, nil)
@@ -310,7 +318,7 @@ defmodule ColistWeb.ListLive.Show do
         {:noreply, socket}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to update item")}
+        {:noreply, put_flash(socket, :error, gettext("Failed to update item"))}
     end
   end
 
@@ -338,7 +346,7 @@ defmodule ColistWeb.ListLive.Show do
            |> stream_insert(:items, updated_item)}
 
         {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, "Failed to update item")}
+          {:noreply, put_flash(socket, :error, gettext("Failed to update item"))}
       end
     else
       {:noreply,
@@ -366,7 +374,7 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_event("copied_url", _params, socket) do
-    {:noreply, put_flash(socket, :info, "URL copied to clipboard!")}
+    {:noreply, put_flash(socket, :info, gettext("URL copied to clipboard!"))}
   end
 
   def handle_event("update_title", %{"value" => title}, socket) do
@@ -379,7 +387,7 @@ defmodule ColistWeb.ListLive.Show do
           {:noreply, assign(socket, :list, updated_list)}
 
         {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, "Failed to update title")}
+          {:noreply, put_flash(socket, :error, gettext("Failed to update title"))}
       end
     else
       {:noreply, socket}
@@ -452,7 +460,7 @@ defmodule ColistWeb.ListLive.Show do
       {:error, :rate_limited, _retry_after} ->
         {:noreply,
          socket
-         |> put_flash(:error, "Too many items created. Please try again later.")
+         |> put_flash(:error, gettext("Too many items created. Please try again later."))
          |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
     end
   end

@@ -14,25 +14,117 @@ msgstr ""
 #: lib/colist_web/components/core_components.ex:368
 #, elixir-autogen, elixir-format
 msgid "Actions"
-msgstr ""
+msgstr "Ações"
 
-#: lib/colist_web/components/layouts.ex:84
-#: lib/colist_web/components/layouts.ex:96
+#: lib/colist_web/components/layouts.ex:85
+#: lib/colist_web/components/layouts.ex:97
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
-msgstr ""
+msgstr "Tentando reconectar"
 
-#: lib/colist_web/components/layouts.ex:91
+#: lib/colist_web/components/layouts.ex:92
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
-msgstr ""
+msgstr "Algo deu errado!"
 
-#: lib/colist_web/components/layouts.ex:79
+#: lib/colist_web/components/layouts.ex:80
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
-msgstr ""
+msgstr "Não conseguimos encontrar a internet"
 
 #: lib/colist_web/components/core_components.ex:74
+#: lib/colist_web/live/list_live/show.ex:80
 #, elixir-autogen, elixir-format
 msgid "close"
-msgstr ""
+msgstr "fechar"
+
+#: lib/colist_web/live/list_live/show.ex:141
+#, elixir-autogen, elixir-format
+msgid "%{completed}/%{total} completed"
+msgstr "%{completed}/%{total} concluídas"
+
+#: lib/colist_web/live/list_live/show.ex:125
+#, elixir-autogen, elixir-format
+msgid "Add a task..."
+msgstr "Adicionar uma tarefa..."
+
+#: lib/colist_web/live/list_live/show.ex:147
+#, elixir-autogen, elixir-format
+msgid "Clear completed"
+msgstr "Limpar concluídas"
+
+#: lib/colist_web/live/list_live/show.ex:103
+#, elixir-autogen, elixir-format
+msgid "Enter your name"
+msgstr "Digite seu nome"
+
+#: lib/colist_web/live/list_live/show.ex:95
+#, elixir-autogen, elixir-format
+msgid "Enter your name:"
+msgstr "Digite seu nome:"
+
+#: lib/colist_web/live/list_live/show.ex:307
+#: lib/colist_web/live/list_live/show.ex:335
+#, elixir-autogen, elixir-format
+msgid "Failed to update item"
+msgstr "Falha ao atualizar item"
+
+#: lib/colist_web/live/list_live/show.ex:376
+#, elixir-autogen, elixir-format
+msgid "Failed to update title"
+msgstr "Falha ao atualizar título"
+
+#: lib/colist_web/live/list_live/show.ex:94
+#, elixir-autogen, elixir-format
+msgid "Hello!"
+msgstr "Olá!"
+
+#: lib/colist_web/live/list_live/show.ex:110
+#, elixir-autogen, elixir-format
+msgid "Joining..."
+msgstr "Entrando..."
+
+#: lib/colist_web/live/list_live/show.ex:227
+#, elixir-autogen, elixir-format
+msgid "List"
+msgstr "Lista"
+
+#: lib/colist_web/live/list_live/show.ex:158
+#, elixir-autogen, elixir-format
+msgid "No tasks yet. Add one above!"
+msgstr "Nenhuma tarefa ainda. Adicione uma acima!"
+
+#: lib/colist_web/live/list_live/show.ex:112
+#, elixir-autogen, elixir-format
+msgid "Set Name"
+msgstr "Definir Nome"
+
+#: lib/colist_web/live/list_live/show.ex:160
+#, elixir-autogen, elixir-format
+msgid "Share the URL to collaborate • Changes sync in real-time"
+msgstr "Compartilhe a URL para colaborar • Alterações sincronizam em tempo real"
+
+#: lib/colist_web/live/list_live/show.ex:449
+#, elixir-autogen, elixir-format
+msgid "Too many items created. Please try again later."
+msgstr "Muitos itens criados. Por favor, tente novamente mais tarde."
+
+#: lib/colist_web/live/list_live/show.ex:363
+#, elixir-autogen, elixir-format
+msgid "URL copied to clipboard!"
+msgstr "URL copiada para a área de transferência!"
+
+#: lib/colist_web/live/list_live/show.ex:33
+#, elixir-autogen, elixir-format
+msgid "Untitled"
+msgstr "Sem título"
+
+#: lib/colist_web/live/list_live/show.ex:56
+#, elixir-autogen, elixir-format
+msgid "Who's here"
+msgstr "Quem está aqui"
+
+#: lib/colist_web/live/list_live/show.ex:68
+#, elixir-autogen, elixir-format
+msgid "you"
+msgstr "você"

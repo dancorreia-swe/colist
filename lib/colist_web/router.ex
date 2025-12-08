@@ -8,6 +8,7 @@ defmodule ColistWeb.Router do
     plug :put_root_layout, html: {ColistWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug ColistWeb.Plugs.Locale
   end
 
   pipeline :api do
@@ -15,6 +16,15 @@ defmodule ColistWeb.Router do
   end
 
   scope "/", ColistWeb do
+    pipe_through :browser
+
+    get "/", ListController, :create
+    get "/rate-limited", PageController, :rate_limited
+
+    live "/:slug", ListLive.Show, :show
+  end
+
+  scope "/pt_BR", ColistWeb, as: :pt_br do
     pipe_through :browser
 
     get "/", ListController, :create
