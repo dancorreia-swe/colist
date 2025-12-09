@@ -6,227 +6,6 @@ defmodule ColistWeb.ListLive.Show do
 
   @topic "todo"
 
-  defp hsl_color(nil), do: nil
-
-  defp hsl_color(id) do
-    hue = :erlang.phash2(id, 360)
-    "hsl(#{hue}, 70%, 60%)"
-  end
-
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <Layouts.app flash={@flash}>
-      <header
-        class="flex items-center justify-between gap-6 pb-4"
-        phx-hook="LocalStoreData"
-        id="list-header"
-      >
-        <input
-          type="text"
-          name="title"
-          value={@list.title}
-          phx-blur="update_title"
-          phx-keydown="update_title"
-          phx-key="Enter"
-          class="text-lg font-semibold leading-8 bg-transparent border-none outline-none w-full focus:bg-base-200 focus:px-2 focus:-mx-2 rounded transition-all"
-          placeholder={gettext("Untitled")}
-        />
-        <div class="flex-none flex items-center gap-2">
-          <button
-            class="btn btn-ghost btn-sm gap-1"
-            onclick="presences_modal.showModal()"
-          >
-            <.icon name="hero-users" class="size-4" />
-            <span class="badge badge-sm">{@presence_count}</span>
-          </button>
-          <.button phx-hook="CopyUrl" id="copy-url-btn">
-            <.icon name="hero-link" />
-          </.button>
-        </div>
-      </header>
-
-      <dialog id="presences_modal" class="modal">
-        <div class="modal-box">
-          <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">
-              ✕
-            </button>
-          </form>
-          <h3 class="text-lg font-bold mb-4">{gettext("Who's here")}</h3>
-          <ul id="presences-list" phx-update="stream" class="space-y-2">
-            <li
-              :for={{id, presence} <- @streams.presences}
-              id={id}
-              class="flex items-center gap-2"
-            >
-              <span
-                class="w-3 h-3 rounded-full"
-                style={"background-color: #{presence.color || "oklch(0.872 0.01 258.338)"}"}
-              >
-              </span>
-              <span>{presence.user.name}</span>
-              <span :if={presence.id == @current_user} class="badge badge-xs">{gettext("you")}</span>
-              <button
-                :if={presence.id == @current_user}
-                class="btn btn-ghost btn-xs"
-                onclick="presences_modal.close(); name_modal.showModal();"
-              >
-                <.icon name="hero-pencil-square" class="size-3" />
-              </button>
-            </li>
-          </ul>
-        </div>
-        <form method="dialog" class="modal-backdrop">
-          <button class="cursor-pointer" onclick="document.getElementById('presences_modal').close()">
-            {gettext("close")}
-          </button>
-        </form>
-      </dialog>
-
-      <dialog id="name_modal" class="modal">
-        <div class="modal-box">
-          <form method="dialog">
-            <button
-              id="close-name-modal"
-              class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-            >
-              ✕
-            </button>
-          </form>
-          <h3 class="text-lg font-bold">{gettext("Hello!")}</h3>
-          <p class="py-4">{gettext("Enter your name:")}</p>
-
-          <form phx-submit={JS.push("set_presence") |> JS.dispatch("click", to: "#close-name-modal")}>
-            <input
-              id="name-input"
-              name="value"
-              type="text"
-              value={@current_user}
-              placeholder={gettext("Enter your name")}
-              class="input input-bordered w-full"
-            />
-            <div class="modal-action">
-              <button
-                type="submit"
-                class="btn btn-primary"
-                phx-disable-with={gettext("Joining...")}
-              >
-                {gettext("Set Name")}
-              </button>
-            </div>
-          </form>
-        </div>
-      </dialog>
-
-      <.form
-        for={@form}
-        id="item-form"
-        phx-change="validate"
-        phx-submit="save"
-        class="flex gap-2 items-start"
-      >
-        <div class="flex-1">
-          <.input
-            id="new-item-input"
-            field={@form[:text]}
-            type="text"
-            placeholder={gettext("Add a task...")}
-            class="input input-ghost w-full text-base focus:input-bordered focus:bg-base-100"
-          />
-        </div>
-        <button
-          type="submit"
-          class="btn btn-primary btn-square md:hidden mt-1"
-        >
-          <.icon name="hero-paper-airplane" class="size-5 -rotate-45" />
-        </button>
-      </.form>
-
-      <div
-        :if={@total_items > 0}
-        class="flex items-center justify-between text-sm text-base-content/60 mb-2"
-      >
-        <span>
-          {gettext("%{completed}/%{total} completed",
-            completed: @completed_items,
-            total: @total_items
-          )}
-        </span>
-        <button
-          :if={@completed_items > 0}
-          phx-click="clear_completed"
-          class="text-xs hover:text-error transition-colors"
-        >
-          {gettext("Clear completed")}
-        </button>
-      </div>
-
-      <ul
-        class="bg-base-100 rounded-box shadow-md"
-        id="items"
-        phx-update="stream"
-        phx-hook="DragNDrop"
-      >
-        <li id="items-empty" class="hidden only:block py-8 px-4 text-center text-base-content/50">
-          <p class="mb-2">{gettext("No tasks yet. Add one above!")}</p>
-          <p class="text-xs">
-            {gettext("Share the URL to collaborate • Changes sync in real-time")}
-          </p>
-        </li>
-        <li
-          :for={{item_id, item} <- @streams.items}
-          class={["flex items-center gap-2 py-2 px-4 sm:px-3 group", item.completed && "opacity-50"]}
-          id={item_id}
-        >
-          <span class="drag-handle cursor-grab active:cursor-grabbing opacity-30 hover:opacity-100 touch-none p-2 -m-2 sm:p-0 sm:m-0">
-            <.icon name="hero-bars-2" class="size-5 sm:size-4" />
-          </span>
-          <span
-            class="w-2 h-2 rounded-full shrink-0"
-            style={"background-color: #{hsl_color(item.creator_id) || "oklch(0.872 0.01 258.338)"}"}
-          >
-          </span>
-          <input
-            id={"complete-item-#{item.id}"}
-            type="checkbox"
-            checked={item.completed}
-            phx-click={JS.push("toggle_completion", value: %{id: item.id})}
-            class="checkbox checkbox-sm"
-          />
-          <input
-            :if={@editing_item_id == item.id}
-            type="text"
-            value={item.text}
-            phx-blur="save_edit"
-            phx-keydown="edit_keydown"
-            phx-value-id={item.id}
-            phx-mounted={JS.focus()}
-            class="flex-1 bg-transparent border-none outline-none"
-            id={"edit-item-#{item.id}"}
-          />
-          <span
-            :if={@editing_item_id != item.id}
-            class={["flex-1 cursor-text", item.completed && "line-through"]}
-            phx-click={JS.push("start_edit", value: %{id: item.id})}
-          >
-            {item.text}
-          </span>
-          <button
-            class="btn btn-square btn-ghost btn-sm opacity-40 sm:opacity-0 sm:group-hover:opacity-100 text-error"
-            phx-click={
-              JS.push("delete", value: %{id: item.id})
-              |> hide("##{item_id}")
-            }
-          >
-            <.icon name="hero-x-mark" class="size-4" />
-          </button>
-        </li>
-      </ul>
-    </Layouts.app>
-    """
-  end
-
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
     ColistWeb.Endpoint.subscribe(@topic <> ":#{slug}")
@@ -259,16 +38,13 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   defp get_client_ip(socket) do
-    # First try X-Forwarded-For header (set by reverse proxies like Fly.io)
     case get_connect_info(socket, :x_headers) do
       headers when is_list(headers) ->
         case List.keyfind(headers, "x-forwarded-for", 0) do
           {"x-forwarded-for", value} ->
-            # X-Forwarded-For can contain multiple IPs, take the first (original client)
             value |> String.split(",") |> List.first() |> String.trim()
 
           nil ->
-            # Fall back to peer_data if no X-Forwarded-For
             get_peer_ip(socket)
         end
 
@@ -564,7 +340,6 @@ defmodule ColistWeb.ListLive.Show do
 
   def handle_info({ColistWeb.Presence, {:leave, presence}}, socket) do
     if presence.metas == [] do
-      # Ignore leave event if this is our old name during a name change
       if presence.id == socket.assigns.changing_from do
         {:noreply,
          socket

@@ -26,6 +26,7 @@ import { hooks as colocatedHooks } from "phoenix-colocated/colist";
 import { Hooks as clipboardHook } from "./hooks/clipboard";
 import { Hooks as dragNDrop } from "./hooks/drag-n-drop";
 import { Hooks as localStateStore } from "./hooks/local_state_store";
+import { Hooks as focusEnd } from "./hooks/focus_end";
 import topbar from "../vendor/topbar";
 
 const csrfToken = document
@@ -40,6 +41,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     ...clipboardHook,
     ...dragNDrop,
     ...localStateStore,
+    ...focusEnd,
   },
 });
 

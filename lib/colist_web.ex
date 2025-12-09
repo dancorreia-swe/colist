@@ -88,6 +88,8 @@ defmodule ColistWeb do
       import Phoenix.HTML
       # Core UI components
       import ColistWeb.CoreComponents
+      # App-specific components
+      import ColistWeb.ColistComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

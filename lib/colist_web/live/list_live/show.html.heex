@@ -1,0 +1,60 @@
+<Layouts.app flash={@flash}>
+  <.list_header
+    list={@list}
+    presence_count={@presence_count}
+    current_user={@current_user}
+  />
+
+  <.presences_modal presences={@streams.presences} current_user={@current_user} />
+  <.name_modal current_user={@current_user} />
+
+  <.form
+    for={@form}
+    id="item-form"
+    phx-change="validate"
+    phx-submit="save"
+    class="flex gap-2 items-start"
+  >
+    <div class="flex-1">
+      <.input
+        id="new-item-input"
+        field={@form[:text]}
+        type="text"
+        placeholder={gettext("Add a task...")}
+        class="input input-ghost w-full text-base focus:input-bordered focus:bg-base-100"
+      />
+    </div>
+    <button
+      type="submit"
+      class="btn btn-primary btn-square md:hidden mt-1"
+    >
+      <.icon name="hero-paper-airplane" class="size-5 -rotate-45" />
+    </button>
+  </.form>
+
+  <.list_stats
+    :if={@total_items > 0}
+    completed_items={@completed_items}
+    total_items={@total_items}
+  />
+
+  <ul
+    class="bg-base-100 rounded-box shadow-md"
+    id="items"
+    phx-update="stream"
+    phx-hook="DragNDrop"
+  >
+    <li id="items-empty" class="hidden only:block py-8 px-4 text-center text-base-content/50">
+      <p class="mb-2">{gettext("No tasks yet. Add one above!")}</p>
+      <p class="text-xs">
+        {gettext("Share the URL to collaborate • Changes sync in real-time")}
+      </p>
+    </li>
+    <.item_row
+      :for={{item_id, item} <- @streams.items}
+      item={item}
+      item_id={item_id}
+      editing={@editing_item_id == item.id}
+    />
+  </ul>
+</Layouts.app>
