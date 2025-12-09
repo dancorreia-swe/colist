@@ -14,6 +14,11 @@ Hooks.LocalStoreData = {
     this.initClientId();
   },
 
+  reconnected() {
+    // Re-establish client identity after socket reconnection (e.g., mobile app switch)
+    this.initClientId();
+  },
+
   store(obj) {
     localStorage.setItem(obj.key, obj.data);
   },
