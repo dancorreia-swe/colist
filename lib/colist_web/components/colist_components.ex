@@ -202,7 +202,7 @@ defmodule ColistWeb.ColistComponents do
         phx-keydown="edit_keydown"
         phx-value-id={@item.id}
         phx-hook="FocusEnd"
-        class="flex-1 bg-transparent border-none resize-none field-sizing-content outline-offset-4"
+        class="flex-1 bg-transparent border-none resize-none field-sizing-content focus:bg-base-200 focus:p-1 focus:-m-1 rounded outline-none transition-all"
         id={"edit-item-#{@item.id}"}
       >{@item.text}</textarea>
       <span
@@ -212,16 +212,47 @@ defmodule ColistWeb.ColistComponents do
       >
         {@item.text}
       </span>
-      <div class="shrink-0 h-6 flex items-center">
+      <div class="shrink-0 h-6 flex items-center gap-1">
         <button
-          class="btn btn-square btn-ghost btn-sm opacity-40 sm:opacity-0 sm:group-hover:opacity-100 text-error"
-          phx-click={
-            Phoenix.LiveView.JS.push("delete", value: %{id: @item.id})
-            |> Phoenix.LiveView.JS.hide(to: "##{@item_id}")
-          }
+          class={[
+            "btn btn-ghost btn-xs gap-1 min-h-6",
+            @item.voted && "text-primary",
+            !@item.voted && "opacity-50 hover:opacity-100"
+          ]}
+          phx-click={Phoenix.LiveView.JS.push("toggle_vote", value: %{id: @item.id})}
         >
-          <.icon name="hero-x-mark" class="size-4" />
+          <.icon
+            name={if @item.voted, do: "hero-chevron-up-solid", else: "hero-chevron-up"}
+            class="size-4"
+          />
+          <span :if={@item.vote_count > 0} class="text-xs font-medium">{@item.vote_count}</span>
         </button>
+        <div class="dropdown dropdown-end">
+          <div
+            tabindex="0"
+            role="button"
+            class="btn btn-ghost btn-xs btn-square min-h-6 opacity-0 group-hover:opacity-50 hover:!opacity-100"
+          >
+            <.icon name="hero-ellipsis-vertical" class="size-4" />
+          </div>
+          <ul
+            tabindex="0"
+            class="dropdown-content menu bg-base-200 rounded-box z-10 w-32 p-1 shadow-lg"
+          >
+            <li>
+              <button
+                class="text-error"
+                phx-click={
+                  Phoenix.LiveView.JS.push("delete", value: %{id: @item.id})
+                  |> Phoenix.LiveView.JS.hide(to: "##{@item_id}")
+                }
+              >
+                <.icon name="hero-trash" class="size-4" />
+                {gettext("Delete")}
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
     </li>
     """

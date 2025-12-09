@@ -10,7 +10,7 @@ defmodule ColistWeb.ListLive.Show do
   def mount(%{"slug" => slug}, _session, socket) do
     ColistWeb.Endpoint.subscribe(@topic <> ":#{slug}")
     list = Lists.get_list_by_slug!(slug)
-    items = list_items(list.id)
+    items = list_items(list.id, nil)
     completed_count = Enum.count(items, & &1.completed)
 
     client_ip = get_client_ip(socket)
@@ -33,8 +33,12 @@ defmodule ColistWeb.ListLive.Show do
      |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
   end
 
-  defp list_items(list_id) do
+  defp list_items(list_id, nil = _voter_id) do
     Lists.list_items_by_list_id(list_id)
+  end
+
+  defp list_items(list_id, voter_id) do
+    Lists.list_items_with_votes(list_id, voter_id)
   end
 
   defp get_client_ip(socket) do
@@ -63,11 +67,14 @@ defmodule ColistWeb.ListLive.Show do
   @impl true
   def handle_event("set_client_id", %{"client_id" => client_id}, socket) do
     user_color = hsl_color(client_id)
+    # Reload items with vote data now that we have the client_id
+    items = list_items(socket.assigns.list.id, client_id)
 
     {:noreply,
      socket
      |> assign(:client_id, client_id)
-     |> assign(:user_color, user_color)}
+     |> assign(:user_color, user_color)
+     |> stream(:items, items, reset: true)}
   end
 
   def handle_event("validate", %{"item" => item_params}, socket) do
@@ -103,6 +110,8 @@ defmodule ColistWeb.ListLive.Show do
 
     case Lists.update_item(item, %{completed: !item.completed}) do
       {:ok, updated_item} ->
+        # Reload with vote data
+        updated_item = Lists.load_item_votes(updated_item, socket.assigns.client_id)
         broadcast(socket.assigns.list.slug, "item_updated", %{item: updated_item})
 
         socket =
@@ -117,8 +126,36 @@ defmodule ColistWeb.ListLive.Show do
     end
   end
 
+  def handle_event("toggle_vote", %{"id" => id}, socket) do
+    voter_id = socket.assigns.client_id
+
+    if voter_id do
+      case Lists.toggle_vote(id, voter_id) do
+        {:ok, action} ->
+          broadcast(socket.assigns.list.slug, "item_voted", %{item_id: id, action: action})
+
+          # Get sorted items and extract order
+          items = list_items(socket.assigns.list.id, voter_id)
+          sorted_ids = Enum.map(items, & &1.id)
+
+          # Update items in stream (without reset) and push reorder to client
+          socket =
+            Enum.reduce(items, socket, fn item, acc ->
+              stream_insert(acc, :items, item)
+            end)
+
+          {:noreply, push_event(socket, "reorder_items", %{ids: sorted_ids})}
+
+        {:error, _} ->
+          {:noreply, put_flash(socket, :error, gettext("Failed to vote"))}
+      end
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("start_edit", %{"id" => id}, socket) do
-    item = Lists.get_item!(id)
+    item = Lists.get_item!(id) |> Lists.load_item_votes(socket.assigns.client_id)
 
     {:noreply,
      socket
@@ -133,6 +170,7 @@ defmodule ColistWeb.ListLive.Show do
     if text != "" and text != item.text do
       case Lists.update_item(item, %{text: text}) do
         {:ok, updated_item} ->
+          updated_item = Lists.load_item_votes(updated_item, socket.assigns.client_id)
           broadcast(socket.assigns.list.slug, "item_updated", %{item: updated_item})
 
           {:noreply,
@@ -144,6 +182,8 @@ defmodule ColistWeb.ListLive.Show do
           {:noreply, put_flash(socket, :error, gettext("Failed to update item"))}
       end
     else
+      item = Lists.load_item_votes(item, socket.assigns.client_id)
+
       {:noreply,
        socket
        |> assign(:editing_item_id, nil)
@@ -156,7 +196,7 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_event("edit_keydown", %{"key" => "Escape", "id" => id}, socket) do
-    item = Lists.get_item!(id)
+    item = Lists.get_item!(id) |> Lists.load_item_votes(socket.assigns.client_id)
 
     {:noreply,
      socket
@@ -208,7 +248,7 @@ defmodule ColistWeb.ListLive.Show do
      socket
      |> assign(:completed_items, 0)
      |> update(:total_items, &(&1 - length(completed_items)))
-     |> stream(:items, list_items(list_id), reset: true)}
+     |> stream(:items, list_items(list_id, socket.assigns.client_id), reset: true)}
   end
 
   def handle_event("no_name", _params, socket) do
@@ -291,6 +331,9 @@ defmodule ColistWeb.ListLive.Show do
 
   @impl true
   def handle_info(%{event: "item_created", payload: %{item: item}}, socket) do
+    # Load vote data for the new item
+    item = Lists.load_item_votes(item, socket.assigns.client_id)
+
     {:noreply,
      socket
      |> update(:total_items, &(&1 + 1))
@@ -298,8 +341,10 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_info(%{event: "item_updated", payload: %{item: item}}, socket) do
-    items = list_items(socket.assigns.list.id)
+    items = list_items(socket.assigns.list.id, socket.assigns.client_id)
     completed_count = Enum.count(items, & &1.completed)
+    # Reload item with current user's vote status
+    item = Lists.load_item_votes(item, socket.assigns.client_id)
 
     {:noreply,
      socket
@@ -324,7 +369,21 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_info(%{event: "items_reordered", payload: %{ids: _ids}}, socket) do
-    {:noreply, stream(socket, :items, list_items(socket.assigns.list.id), reset: true)}
+    {:noreply, stream(socket, :items, list_items(socket.assigns.list.id, socket.assigns.client_id), reset: true)}
+  end
+
+  def handle_info(%{event: "item_voted", payload: %{item_id: _item_id}}, socket) do
+    # Another user voted - get sorted items and animate reorder
+    items = list_items(socket.assigns.list.id, socket.assigns.client_id)
+    sorted_ids = Enum.map(items, & &1.id)
+
+    # Update items in stream (without reset) and push reorder to client
+    socket =
+      Enum.reduce(items, socket, fn item, acc ->
+        stream_insert(acc, :items, item)
+      end)
+
+    {:noreply, push_event(socket, "reorder_items", %{ids: sorted_ids})}
   end
 
   def handle_info({ColistWeb.Presence, {:join, presence}}, socket) do

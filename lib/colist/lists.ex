@@ -7,6 +7,8 @@ defmodule Colist.Lists do
   alias Colist.Repo
 
   alias Colist.Lists.List
+  alias Colist.Lists.Item
+  alias Colist.Lists.ItemVote
 
   @doc """
   Returns the list of lists.
@@ -131,8 +133,6 @@ defmodule Colist.Lists do
     List.changeset(list, attrs)
   end
 
-  alias Colist.Lists.Item
-
   @doc """
   Returns the list of items.
 
@@ -147,7 +147,15 @@ defmodule Colist.Lists do
   end
 
   def list_items_by_list_id(list_id) do
-    Repo.all(from i in Item, where: i.list_id == ^list_id, order_by: [asc: i.position, asc: i.id])
+    from(i in Item,
+      where: i.list_id == ^list_id,
+      left_join: v in ItemVote,
+      on: v.item_id == i.id,
+      group_by: i.id,
+      select: %{i | vote_count: count(v.id), voted: false},
+      order_by: [desc: count(v.id), asc: i.position, asc: i.id]
+    )
+    |> Repo.all()
   end
 
   def list_completed_items(list_id) do
@@ -244,5 +252,72 @@ defmodule Colist.Lists do
   """
   def change_item(%Item{} = item, attrs \\ %{}) do
     Item.changeset(item, attrs)
+  end
+
+  # Votes
+
+  @doc """
+  Toggles a vote for an item. If the voter has already voted, removes the vote.
+  Otherwise, creates a new vote.
+
+  Returns `{:ok, :voted}` or `{:ok, :unvoted}` on success.
+  """
+  def toggle_vote(item_id, voter_id) do
+    case Repo.get_by(ItemVote, item_id: item_id, voter_id: voter_id) do
+      nil ->
+        %ItemVote{}
+        |> ItemVote.changeset(%{item_id: item_id, voter_id: voter_id})
+        |> Repo.insert()
+        |> case do
+          {:ok, _vote} -> {:ok, :voted}
+          {:error, changeset} -> {:error, changeset}
+        end
+
+      vote ->
+        Repo.delete(vote)
+        {:ok, :unvoted}
+    end
+  end
+
+  @doc """
+  Returns the vote count for an item.
+  """
+  def get_vote_count(item_id) do
+    from(v in ItemVote, where: v.item_id == ^item_id, select: count(v.id))
+    |> Repo.one()
+  end
+
+  @doc """
+  Checks if a voter has voted for an item.
+  """
+  def has_voted?(item_id, voter_id) do
+    Repo.exists?(from v in ItemVote, where: v.item_id == ^item_id and v.voter_id == ^voter_id)
+  end
+
+  @doc """
+  Returns items for a list with vote counts and whether the given voter has voted.
+  Returns Item structs with virtual fields :vote_count and :voted populated.
+  """
+  def list_items_with_votes(list_id, voter_id) do
+    from(i in Item,
+      where: i.list_id == ^list_id,
+      left_join: v in ItemVote,
+      on: v.item_id == i.id,
+      left_join: my_vote in ItemVote,
+      on: my_vote.item_id == i.id and my_vote.voter_id == ^voter_id,
+      group_by: [i.id, my_vote.id],
+      select: %{i | vote_count: count(v.id), voted: not is_nil(my_vote.id)},
+      order_by: [desc: count(v.id), asc: i.position, asc: i.id]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Loads vote data for a single item.
+  """
+  def load_item_votes(item, voter_id) do
+    vote_count = get_vote_count(item.id)
+    voted = has_voted?(item.id, voter_id)
+    %{item | vote_count: vote_count, voted: voted}
   end
 end
