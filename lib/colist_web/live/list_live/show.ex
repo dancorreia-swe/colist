@@ -74,7 +74,8 @@ defmodule ColistWeb.ListLive.Show do
      socket
      |> assign(:client_id, client_id)
      |> assign(:user_color, user_color)
-     |> stream(:items, items, reset: true)}
+     |> stream(:items, items, reset: true)
+     |> push_event("client_ready", %{})}
   end
 
   def handle_event("validate", %{"item" => item_params}, socket) do
@@ -258,9 +259,11 @@ defmodule ColistWeb.ListLive.Show do
   def handle_event("set_presence", %{"value" => name}, socket) do
     slug = socket.assigns.list.slug
     old_name = socket.assigns.current_user
-    color = socket.assigns.user_color
 
-    if connected?(socket) do
+    # Ensure we have a color - fallback to generating from client_id if somehow nil
+    color = socket.assigns.user_color || hsl_color(socket.assigns.client_id)
+
+    if connected?(socket) and socket.assigns.client_id do
       if old_name do
         ColistWeb.Presence.untrack_user(slug, old_name)
         ColistWeb.Presence.track_user(slug, name, %{id: name, color: color})
@@ -288,15 +291,19 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   defp save_item(socket, :show, item_params) do
-    case RateLimit.check_item_creation(socket.assigns.client_ip) do
-      :ok ->
-        create_item(socket, item_params)
+    if is_nil(socket.assigns.client_id) do
+      {:noreply, socket}
+    else
+      case RateLimit.check_item_creation(socket.assigns.client_ip) do
+        :ok ->
+          create_item(socket, item_params)
 
-      {:error, :rate_limited, _retry_after} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, gettext("Too many items created. Please try again later."))
-         |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
+        {:error, :rate_limited, _retry_after} ->
+          {:noreply,
+           socket
+           |> put_flash(:error, gettext("Too many items created. Please try again later."))
+           |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))}
+      end
     end
   end
 
@@ -369,7 +376,10 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_info(%{event: "items_reordered", payload: %{ids: _ids}}, socket) do
-    {:noreply, stream(socket, :items, list_items(socket.assigns.list.id, socket.assigns.client_id), reset: true)}
+    {:noreply,
+     stream(socket, :items, list_items(socket.assigns.list.id, socket.assigns.client_id),
+       reset: true
+     )}
   end
 
   def handle_info(%{event: "item_voted", payload: %{item_id: _item_id}}, socket) do

@@ -8,9 +8,10 @@ Hooks.LocalStoreData = {
     this.handleEvent("focus", ({ id }) => {
       setTimeout(() => document.getElementById(id)?.focus(), 50);
     });
+    // Wait for client_id to be acknowledged before checking username
+    this.handleEvent("client_ready", () => this.checkUserName());
 
     this.initClientId();
-    this.checkUserName();
   },
 
   store(obj) {
