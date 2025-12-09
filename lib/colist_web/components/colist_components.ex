@@ -231,7 +231,7 @@ defmodule ColistWeb.ColistComponents do
           <div
             tabindex="0"
             role="button"
-            class="btn btn-ghost btn-xs btn-square min-h-6 opacity-0 group-hover:opacity-50 hover:!opacity-100"
+            class="btn btn-ghost btn-xs btn-square min-h-6 opacity-50 group-hover:opacity-50 hover:opacity-100!"
           >
             <.icon name="hero-ellipsis-vertical" class="size-4" />
           </div>
