@@ -21,7 +21,8 @@ config :colist, ColistWeb.Endpoint,
   ],
   check_origin: [
     "https://colist.live",
-    "https://www.colist.live"
+    "https://www.colist.live",
+    "https://new.colist.live"
   ],
   pubsub_server: Colist.PubSub,
   live_view: [signing_salt: "ZeS2zs/6"]
