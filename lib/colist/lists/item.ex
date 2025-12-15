@@ -2,10 +2,11 @@ defmodule Colist.Lists.Item do
   use Ecto.Schema
 
   alias Colist.Lists.{List, ItemVote}
+  alias __MODULE__
 
   import Ecto.Changeset
 
-  @derive {Jason.Encoder, only: [:id, :text, :completed, :position, :list_id, :creator_id]}
+  @derive {Jason.Encoder, only: [:id, :text, :completed, :position, :list_id, :creator_id, :parent_id]}
 
   schema "items" do
     field :text, :string
@@ -13,6 +14,8 @@ defmodule Colist.Lists.Item do
     field :position, :integer
     field :creator_id, :string
     belongs_to :list, List
+    belongs_to :parent, Item, foreign_key: :parent_id
+    has_many :subtasks, Item, foreign_key: :parent_id
     has_many :votes, ItemVote
 
     # Virtual fields for vote display
@@ -25,6 +28,6 @@ defmodule Colist.Lists.Item do
   @doc false
   def changeset(item, attrs) do
     item
-    |> cast(attrs, [:text, :completed, :position, :list_id, :creator_id])
+    |> cast(attrs, [:text, :completed, :position, :list_id, :creator_id, :parent_id])
   end
 end
