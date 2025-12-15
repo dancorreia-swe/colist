@@ -27,6 +27,7 @@ import { Hooks as clipboardHook } from "./hooks/clipboard";
 import { Hooks as dragNDrop } from "./hooks/drag-n-drop";
 import { Hooks as localStateStore } from "./hooks/local_state_store";
 import { Hooks as focusEnd } from "./hooks/focus_end";
+import { Hooks as keyboard } from "./hooks/keyboard";
 import topbar from "../vendor/topbar";
 
 const csrfToken = document
@@ -42,6 +43,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     ...dragNDrop,
     ...localStateStore,
     ...focusEnd,
+    ...keyboard,
   },
 });
 
@@ -50,6 +52,29 @@ topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
 
 window.addEventListener("phx:page-loading-start", (_info) => topbar.show(300));
 window.addEventListener("phx:page-loading-stop", (_info) => topbar.hide());
+
+// Focus item textarea after creation (for Shift+Enter rapid entry)
+window.addEventListener("phx:focus_item", (e) => {
+  const { id } = e.detail;
+  // Small delay to ensure DOM is updated
+  setTimeout(() => {
+    const textarea = document.getElementById(`edit-item-${id}`);
+    if (textarea) {
+      textarea.focus();
+      textarea.setSelectionRange(0, 0);
+    }
+  }, 50);
+});
+
+// Refocus main input after rapid entry (Shift+Enter)
+window.addEventListener("phx:refocus_main_input", () => {
+  setTimeout(() => {
+    const input = document.getElementById("new-item-input");
+    if (input) {
+      input.focus();
+    }
+  }, 50);
+});
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();

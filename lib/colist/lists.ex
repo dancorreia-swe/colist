@@ -147,15 +147,7 @@ defmodule Colist.Lists do
   end
 
   def list_items_by_list_id(list_id) do
-    from(i in Item,
-      where: i.list_id == ^list_id,
-      left_join: v in ItemVote,
-      on: v.item_id == i.id,
-      group_by: i.id,
-      select: %{i | vote_count: count(v.id), voted: false},
-      order_by: [desc: count(v.id), asc: i.position, asc: i.id]
-    )
-    |> Repo.all()
+    list_items_flat(list_id, nil)
   end
 
   def list_completed_items(list_id) do
@@ -188,6 +180,8 @@ defmodule Colist.Lists do
 
   """
   def get_item!(id), do: Repo.get!(Item, id)
+
+  def get_item(id), do: Repo.get(Item, id)
 
   @doc """
   Creates a item.
@@ -299,17 +293,58 @@ defmodule Colist.Lists do
   Returns Item structs with virtual fields :vote_count and :voted populated.
   """
   def list_items_with_votes(list_id, voter_id) do
-    from(i in Item,
-      where: i.list_id == ^list_id,
-      left_join: v in ItemVote,
-      on: v.item_id == i.id,
-      left_join: my_vote in ItemVote,
-      on: my_vote.item_id == i.id and my_vote.voter_id == ^voter_id,
-      group_by: [i.id, my_vote.id],
-      select: %{i | vote_count: count(v.id), voted: not is_nil(my_vote.id)},
-      order_by: [desc: count(v.id), asc: i.position, asc: i.id]
-    )
-    |> Repo.all()
+    list_items_flat(list_id, voter_id)
+  end
+
+  @doc """
+  Returns all items (parents and subtasks) in a flat list, ordered for display:
+  - Top-level items ordered by votes desc, then position
+  - Each parent's subtasks immediately follow, ordered by position
+  """
+  def list_items_flat(list_id, voter_id) do
+    # First get all items with vote counts
+    all_items =
+      if voter_id do
+        from(i in Item,
+          where: i.list_id == ^list_id,
+          left_join: v in ItemVote,
+          on: v.item_id == i.id,
+          left_join: my_vote in ItemVote,
+          on: my_vote.item_id == i.id and my_vote.voter_id == ^voter_id,
+          group_by: [i.id, my_vote.id],
+          select: %{i | vote_count: count(v.id), voted: not is_nil(my_vote.id)}
+        )
+        |> Repo.all()
+      else
+        from(i in Item,
+          where: i.list_id == ^list_id,
+          left_join: v in ItemVote,
+          on: v.item_id == i.id,
+          group_by: i.id,
+          select: %{i | vote_count: count(v.id), voted: false}
+        )
+        |> Repo.all()
+      end
+
+    # Separate parents and children
+    {parents, children} = Enum.split_with(all_items, &is_nil(&1.parent_id))
+
+    # Sort parents by votes desc, then position
+    sorted_parents =
+      Enum.sort_by(parents, fn p -> {-p.vote_count, p.position, p.id} end)
+
+    # Group children by parent_id
+    children_by_parent = Enum.group_by(children, & &1.parent_id)
+
+    # Interleave: parent followed by its children
+    Enum.flat_map(sorted_parents, fn parent ->
+      subtasks =
+        children_by_parent
+        |> Map.get(parent.id, [])
+        |> Enum.sort_by(fn c -> {c.position, c.id} end)
+
+      [parent | subtasks]
+    end)
   end
 
   @doc """
@@ -319,5 +354,93 @@ defmodule Colist.Lists do
     vote_count = get_vote_count(item.id)
     voted = has_voted?(item.id, voter_id)
     %{item | vote_count: vote_count, voted: voted}
+  end
+
+  # Subtasks
+
+  @doc """
+  Returns subtasks for a given parent item with vote counts.
+  """
+  def list_subtasks(parent_id, voter_id) when is_nil(voter_id) do
+    from(i in Item,
+      where: i.parent_id == ^parent_id,
+      left_join: v in ItemVote,
+      on: v.item_id == i.id,
+      group_by: i.id,
+      select: %{i | vote_count: count(v.id), voted: false},
+      order_by: [asc: i.position, asc: i.id]
+    )
+    |> Repo.all()
+  end
+
+  def list_subtasks(parent_id, voter_id) do
+    from(i in Item,
+      where: i.parent_id == ^parent_id,
+      left_join: v in ItemVote,
+      on: v.item_id == i.id,
+      left_join: my_vote in ItemVote,
+      on: my_vote.item_id == i.id and my_vote.voter_id == ^voter_id,
+      group_by: [i.id, my_vote.id],
+      select: %{i | vote_count: count(v.id), voted: not is_nil(my_vote.id)},
+      order_by: [asc: i.position, asc: i.id]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Creates a subtask under a parent item.
+  Inherits list_id from parent.
+  """
+  def create_subtask(parent_id, attrs) do
+    parent = get_item!(parent_id)
+
+    attrs =
+      attrs
+      |> Map.put("list_id", parent.list_id)
+      |> Map.put("parent_id", parent_id)
+
+    create_item(attrs)
+  end
+
+  @doc """
+  Nests an item under a parent (makes it a subtask).
+  """
+  def nest_item(item_id, parent_id) do
+    item = get_item!(item_id)
+    update_item(item, %{parent_id: parent_id})
+  end
+
+  @doc """
+  Unnests an item (promotes it to top-level).
+  """
+  def unnest_item(item_id) do
+    item = get_item!(item_id)
+    update_item(item, %{parent_id: nil})
+  end
+
+  @doc """
+  Updates positions for items in a flat list.
+  Accepts a list of {id, parent_id} tuples representing the new order.
+  """
+  def update_item_positions_with_nesting(items_order) do
+    items_order
+    |> Enum.with_index()
+    |> Enum.each(fn {{id, parent_id}, index} ->
+      # Convert string IDs to integers
+      id = if is_binary(id), do: String.to_integer(id), else: id
+
+      parent_id =
+        case parent_id do
+          nil -> nil
+          "" -> nil
+          p when is_binary(p) -> String.to_integer(p)
+          p -> p
+        end
+
+      from(i in Item, where: i.id == ^id)
+      |> Repo.update_all(set: [position: index, parent_id: parent_id])
+    end)
+
+    :ok
   end
 end

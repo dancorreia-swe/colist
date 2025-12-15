@@ -172,19 +172,27 @@ defmodule ColistWeb.ColistComponents do
   attr :editing, :boolean, default: false
 
   def item_row(assigns) do
-    assigns = assign(assigns, :color, hsl_color(assigns.item.creator_id))
+    assigns =
+      assigns
+      |> assign(:color, hsl_color(assigns.item.creator_id))
+      |> assign(:is_subtask, not is_nil(assigns.item.parent_id))
 
     ~H"""
     <li
-      class={["flex gap-2 py-2 px-4 sm:px-3 group", @item.completed && "opacity-50"]}
+      class={[
+        "flex gap-2 py-2 px-4 sm:px-3 group",
+        @item.completed && "opacity-50",
+        @is_subtask && "pl-10 sm:pl-9"
+      ]}
       id={@item_id}
+      data-parent-id={@item.parent_id}
     >
       <div class="flex items-center gap-2 shrink-0 h-6">
         <span class="drag-handle cursor-grab active:cursor-grabbing opacity-30 hover:opacity-100 touch-none p-2 -m-2 sm:p-0 sm:m-0">
           <.icon name="hero-bars-2" class="size-5 sm:size-4" />
         </span>
         <span
-          class="w-2 h-2 rounded-full"
+          class={["rounded-full", @is_subtask && "w-1.5 h-1.5", !@is_subtask && "w-2 h-2"]}
           style={"background-color: #{@color || "oklch(0.872 0.01 258.338)"}"}
         >
         </span>
@@ -193,21 +201,28 @@ defmodule ColistWeb.ColistComponents do
           type="checkbox"
           checked={@item.completed}
           phx-click={Phoenix.LiveView.JS.push("toggle_completion", value: %{id: @item.id})}
-          class="checkbox checkbox-sm"
+          class={["checkbox", @is_subtask && "checkbox-xs", !@is_subtask && "checkbox-sm"]}
         />
       </div>
       <textarea
         :if={@editing}
         phx-blur="save_edit"
-        phx-keydown="edit_keydown"
         phx-value-id={@item.id}
-        phx-hook="FocusEnd"
-        class="flex-1 bg-transparent border-none resize-none field-sizing-content focus:bg-base-200 focus:p-1 focus:-m-1 rounded outline-none transition-all"
+        phx-hook="KeyboardEvents"
+        data-item-id={@item.id}
+        class={[
+          "flex-1 bg-transparent border-none resize-none field-sizing-content focus:bg-base-200 focus:p-1 focus:-m-1 rounded outline-none transition-all",
+          @is_subtask && "text-sm"
+        ]}
         id={"edit-item-#{@item.id}"}
       >{@item.text}</textarea>
       <span
         :if={!@editing}
-        class={["flex-1 cursor-text break-all", @item.completed && "line-through"]}
+        class={[
+          "flex-1 cursor-text break-all",
+          @item.completed && "line-through",
+          @is_subtask && "text-sm"
+        ]}
         phx-click={Phoenix.LiveView.JS.push("start_edit", value: %{id: @item.id})}
       >
         {@item.text}
