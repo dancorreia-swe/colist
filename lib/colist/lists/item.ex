@@ -15,7 +15,6 @@ defmodule Colist.Lists.Item do
     field :creator_id, :string
     belongs_to :list, List
     belongs_to :parent, Item, foreign_key: :parent_id
-    has_many :subtasks, Item, foreign_key: :parent_id
     has_many :votes, ItemVote
 
     # Virtual fields for vote display

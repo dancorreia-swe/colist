@@ -230,6 +230,27 @@ defmodule ColistWeb.ListLive.Show do
     end
   end
 
+  def handle_event("reorder", %{"items" => items}, socket) do
+    # Convert to list of {id, parent_id} tuples
+    items_order =
+      Enum.map(items, fn item ->
+        id = item["id"]
+        parent_id = item["parent_id"]
+        {id, parent_id}
+      end)
+
+    Lists.update_item_positions_with_nesting(items_order)
+
+    # Get the ordered ids for broadcast
+    ids = Enum.map(items_order, fn {id, _} -> id end)
+    broadcast(socket.assigns.list.slug, "items_reordered", %{ids: ids})
+
+    # Reload and re-stream items to update UI with new parent_ids
+    items = list_items(socket.assigns.list.id, socket.assigns.client_id)
+    {:noreply, stream(socket, :items, items, reset: true)}
+  end
+
+  # Backwards compatibility for simple id-only reorder
   def handle_event("reorder", %{"ids" => ids}, socket) do
     Lists.update_item_positions(ids)
     broadcast(socket.assigns.list.slug, "items_reordered", %{ids: ids})
