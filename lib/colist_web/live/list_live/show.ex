@@ -64,6 +64,24 @@ defmodule ColistWeb.ListLive.Show do
     end
   end
 
+  defp handle_item_save(socket, item, text) do
+    text = String.trim(text)
+
+    case Lists.update_item(item, %{text: text}) do
+      {:ok, updated_item} ->
+        updated_item = Lists.load_item_votes(updated_item, socket.assigns.client_id)
+        broadcast(socket.assigns.list.slug, "item_updated", %{item: updated_item})
+
+        {:noreply,
+         socket
+         |> assign(:editing_item_id, nil)
+         |> stream_insert(:items, updated_item)}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, gettext("Failed to update item"))}
+    end
+  end
+
   @impl true
   def handle_event("set_client_id", %{"client_id" => client_id}, socket) do
     user_color = hsl_color(client_id)
@@ -165,30 +183,54 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_event("save_edit", %{"id" => id, "value" => text}, socket) do
-    item = Lists.get_item!(id)
+    item = Lists.get_item(id)
+
+    case item do
+      nil ->
+        {:noreply,
+         socket
+         |> assign(:editing_item_id, nil)}
+
+      item ->
+        handle_item_save(socket, item, text)
+    end
+  end
+
+  def handle_event(
+        "edit_keydown",
+        %{"key" => "Enter", "shiftKey" => true, "id" => id, "value" => text},
+        socket
+      ) do
+    current_item = Lists.get_item!(id)
     text = String.trim(text)
 
-    if text != "" and text != item.text do
-      case Lists.update_item(item, %{text: text}) do
-        {:ok, updated_item} ->
-          updated_item = Lists.load_item_votes(updated_item, socket.assigns.client_id)
-          broadcast(socket.assigns.list.slug, "item_updated", %{item: updated_item})
+    if text != "" and text != current_item.text do
+      Lists.update_item(current_item, %{text: text})
+    end
 
-          {:noreply,
-           socket
-           |> assign(:editing_item_id, nil)
-           |> stream_insert(:items, updated_item)}
+    new_item_attrs = %{
+      "text" => "",
+      "list_id" => socket.assigns.list.id,
+      "creator_id" => socket.assigns.client_id,
+      "parent_id" => current_item.parent_id
+    }
 
-        {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, gettext("Failed to update item"))}
-      end
-    else
-      item = Lists.load_item_votes(item, socket.assigns.client_id)
+    case Lists.create_item(new_item_attrs) do
+      {:ok, new_item} ->
+        broadcast(socket.assigns.list.slug, "item_created", %{item: new_item})
 
-      {:noreply,
-       socket
-       |> assign(:editing_item_id, nil)
-       |> stream_insert(:items, item)}
+        # Reload list with updated items
+        items = list_items(socket.assigns.list.id, socket.assigns.client_id)
+
+        {:noreply,
+         socket
+         |> assign(:editing_item_id, new_item.id)
+         |> update(:total_items, &(&1 + 1))
+         |> stream(:items, items, reset: true)
+         |> push_event("focus_item", %{id: new_item.id})}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Failed to create item"))}
     end
   end
 
@@ -206,6 +248,59 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_event("edit_keydown", _params, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("delete_empty_item", %{"id" => id}, socket) do
+    item = Lists.get_item!(id)
+    {:ok, _} = Lists.delete_item(item)
+
+    broadcast(socket.assigns.list.slug, "item_deleted", %{item: item})
+
+    socket =
+      socket
+      |> assign(:editing_item_id, nil)
+      |> update(:total_items, &(&1 - 1))
+      |> then(fn s -> if item.completed, do: update(s, :completed_items, &(&1 - 1)), else: s end)
+      |> stream_delete(:items, item)
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "main_input_keydown",
+        %{"key" => "Enter", "shiftKey" => true, "value" => text},
+        socket
+      ) do
+    text = String.trim(text)
+
+    if text == "" or is_nil(socket.assigns.client_id) do
+      {:noreply, socket}
+    else
+      item_params = %{
+        "text" => text,
+        "list_id" => socket.assigns.list.id,
+        "creator_id" => socket.assigns.client_id
+      }
+
+      case Lists.create_item(item_params) do
+        {:ok, item} ->
+          broadcast(socket.assigns.list.slug, "item_created", %{item: item})
+
+          {:noreply,
+           socket
+           |> update(:total_items, &(&1 + 1))
+           |> stream_insert(:items, item)
+           |> assign(:form, to_form(Lists.change_item(%Lists.Item{})))
+           |> push_event("refocus_main_input", %{})}
+
+        {:error, changeset} ->
+          {:noreply, assign(socket, :form, to_form(changeset))}
+      end
+    end
+  end
+
+  def handle_event("main_input_keydown", _params, socket) do
     {:noreply, socket}
   end
 
@@ -231,7 +326,6 @@ defmodule ColistWeb.ListLive.Show do
   end
 
   def handle_event("reorder", %{"items" => items}, socket) do
-    # Convert to list of {id, parent_id} tuples
     items_order =
       Enum.map(items, fn item ->
         id = item["id"]

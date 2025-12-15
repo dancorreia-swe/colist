@@ -15,7 +15,7 @@
     phx-submit="save"
     class="flex gap-2 items-start"
   >
-    <div class="flex-1">
+    <div class="flex-1" phx-hook="MainInputKeyboard" id="main-input-wrapper">
       <.input
         id="new-item-input"
         field={@form[:text]}

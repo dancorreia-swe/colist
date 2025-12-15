@@ -207,9 +207,9 @@ defmodule ColistWeb.ColistComponents do
       <textarea
         :if={@editing}
         phx-blur="save_edit"
-        phx-keydown="edit_keydown"
         phx-value-id={@item.id}
-        phx-hook="FocusEnd"
+        phx-hook="KeyboardEvents"
+        data-item-id={@item.id}
         class={[
           "flex-1 bg-transparent border-none resize-none field-sizing-content focus:bg-base-200 focus:p-1 focus:-m-1 rounded outline-none transition-all",
           @is_subtask && "text-sm"
